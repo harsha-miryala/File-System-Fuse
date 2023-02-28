@@ -11,9 +11,9 @@
 #define BLOCK_SIZE 1024
 #define BLOCK_COUNT (FS_SIZE/BLOCK_SIZE)
 
-int alloc_memory();
-int dealloc_memory();
-int read_block(int block_id, char *buffer);
-int write_block(int block_id, char *buffer);
+bool alloc_memory();
+bool dealloc_memory();
+bool read_block(int block_id, char *buffer);
+bool write_block(int block_id, char *buffer);
 void free_memory(void *ptr);
 #endif

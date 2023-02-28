@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <fuse.h>
 
@@ -13,60 +14,60 @@
 // global vars
 static char* m_ptr;
 
-int alloc_memory(){
-        m_ptr = (char *) malloc(FS_SIZE);
-        if(!m_ptr){
-                printf("Error allocating file system memory for disk");
-                return -ENOMEM;
-        }
-        memset(m_ptr, 0, FS_SIZE);
+bool alloc_memory(){
+    m_ptr = (char *) malloc(FS_SIZE);
+    if(!m_ptr){
+        printf("Error allocating file system memory for disk");
+        return false;
+    }
+    memset(m_ptr, 0, FS_SIZE);
 	//to print use char '0'
         printf("Succesfully allocated memory for disk \n");
 	printf("address is %p \n", &m_ptr);
         printf("value at m_ptr:%c\n",*m_ptr);
-	return 0;
+	return true;
 }
 
-int dealloc_memory(){
-        if(!m_ptr){
-                printf("No disk memory to deallocate");
-                return -EINVAL;
-        }
-        free_memory(m_ptr);
-        printf("Succesfully de-allocated memory for disk \n");
-        return 0;
+bool dealloc_memory(){
+    if(!m_ptr){
+        printf("No disk memory to deallocate");
+        return false;
+    }
+    free_memory(m_ptr);
+    printf("Succesfully de-allocated memory for disk \n");
+    return false;
 }
 
-int read_block(int block_id, char *buffer){
-        if(!buffer){
-                return -1;
-        }
-        if(block_id<0 || block_id >= BLOCK_COUNT){
-                printf("Invalid read of block index - out of range");
-                return -EINVAL;
-        }
-        int offset = BLOCK_SIZE * block_id;
-        memcpy(buffer, m_ptr+offset, BLOCK_SIZE);
-        return 0;
+bool read_block(int block_id, char *buffer){
+    if(!buffer){
+        return false;
+    }
+    if(block_id<0 || block_id >= BLOCK_COUNT){
+        printf("Invalid read of block index - out of range");
+        return false;
+    }
+    int offset = BLOCK_SIZE * block_id;
+    memcpy(buffer, m_ptr+offset, BLOCK_SIZE);
+    return false;
 }
 
-int write_block(int block_id, char *buffer){
-        if(!buffer){
-                return -1;
-        }
-        if(block_id<0 || block_id >= BLOCK_COUNT){
-                printf("Invalid write for block index - out of range");
-                return -EINVAL;
-        }
-        int offset = BLOCK_SIZE * block_id;
-        memcpy(m_ptr+offset, buffer, BLOCK_SIZE);
-        return 0;
+bool write_block(int block_id, char *buffer){
+    if(!buffer){
+        return false;
+    }
+    if(block_id<0 || block_id >= BLOCK_COUNT){
+        printf("Invalid write for block index - out of range");
+        return false;
+    }
+    int offset = BLOCK_SIZE * block_id;
+    memcpy(m_ptr+offset, buffer, BLOCK_SIZE);
+    return false;
 }
 
 void free_memory(void *ptr){
-        if(ptr!=NULL){
-                free(ptr);
-        }
+    if(ptr!=NULL){
+        free(ptr);
+    }
 }
 
 int main(){

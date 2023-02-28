@@ -1,4 +1,4 @@
-#ifdef __BLOCK_LAYER_H__
+#ifndef __BLOCK_LAYER_H__
 #define __BLOCK_LAYER_H__
 
 #include <stdlib.h>
@@ -15,11 +15,11 @@
 #define FREE_LIST_BLOCKS ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1)
 
 struct superBlock {
-    int inode_sz;
-    int latest_inum;
-    int inodes_per_block;
-    int free_list_head;
-}
+    size_t inode_count;
+    size_t latest_inum;
+    size_t inodes_per_block;
+    size_t free_list_head;
+};
 
 struct iNode {
     size_t direct_blocks[DIRECT_B_COUNT];
@@ -36,24 +36,26 @@ struct iNode {
     time_t creation_time;
     time_t modification_time;
     time_t status_change_time;
-}
+};
 
-int make_fs();
+// TODO : make the output of operation status as true or false instead of 0/-1
 
-int create_new_inode();
+bool make_fs();
+
+bool create_new_inode();
 
 struct iNode* read_inode(int inode_num);
 
-int write_inode(int inode_num, struct iNode* inode);
+bool write_inode(int inode_num, struct iNode* inode);
 
-int free_inode(int inode_num);
+bool free_inode(int inode_num);
 
-int create_new_dblock();
+bool create_new_dblock();
 
 char* read_dblock(int dblock_num);
 
-int write_dblock(int dblock_num, char* buff);
+bool write_dblock(int dblock_num, char* buff);
 
-int free_dblock(int dblock_num);
+bool free_dblock(int dblock_num);
 
 #endif
