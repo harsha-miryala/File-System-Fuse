@@ -12,7 +12,7 @@
 #define BLOCK_SIZE 4096
 //4 KB
 #define BLOCK_COUNT (FS_SIZE/BLOCK_SIZE)
-// Total number of blocks ... in this case - 25000 (less than max size of int)
+// Total number of blocks ... in this case ~ 25000 (less than max size of int)
 
 bool alloc_memory();
 bool dealloc_memory();

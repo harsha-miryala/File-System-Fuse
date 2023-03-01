@@ -13,18 +13,18 @@ bool write_superblock(){
     char buff[BLOCK_SIZE];
     memset(buff, 0, BLOCK_SIZE);
     memcpy(buff, super_block, sizeof(struct superBlock));
-    int status = write_block(0, buff);
-    if(status){
+    if(!write_block(0, buff)){
         printf("Could not write superblock into memory");
+        return false;
     }
-    return status;
+    return true;
 }
 
 bool init_superblock(){
     // assign memory
     super_block = (struct superBlock*) malloc(sizeof(struct superBlock));
     // initialize values
-    super_block->latest_inum = 3; // TODO : Clarify
+    super_block->latest_inum = 3; // It means this is the first free inode, need 1 and 2 for file level op
     super_block->inodes_per_block = (BLOCK_SIZE) / sizeof(struct iNode);
     super_block->inode_count = (INODE_B_COUNT * super_block->inodes_per_block);
     super_block->free_list_head = INODE_B_COUNT + 1;
@@ -34,8 +34,8 @@ bool init_superblock(){
 bool init_inode_list(){
     // TODO : Special place for indirect blocks needs to be added
     struct iNode inode[sizeof(struct iNode)];
-    for(int i=0; i<DIRECT_B_COUNT; i++){
-        inode->direct_blocks[i] = 0;
+    for(size_t i=0; i<DIRECT_B_COUNT; i++){
+        inode->direct_blocks[i] = 0; // using 0 because 0 can only be used by superblock
     }
     inode->single_indirect = 0;
     inode->double_indirect = 0;
@@ -44,12 +44,11 @@ bool init_inode_list(){
     inode->num_blocks = 0;
     inode->allocated = false;
     char buff[BLOCK_SIZE];
-    size_t inodes_per_block = BLOCK_SIZE / sizeof(struct iNode);
     int dummy_value = 0;
-    for(size_t block_id = 1; block_id<=INODE_B_COUNT; block_id++){
+    for(size_t block_id=1; block_id<=INODE_B_COUNT; block_id++){
         size_t offset = 0;
         memset(buff, dummy_value, BLOCK_SIZE);
-        for(int i=0; i<inodes_per_block; i++){
+        for(size_t i=0; i<super_block->inodes_per_block; i++){
             memcpy(buff+offset, inode, sizeof(struct iNode));
             offset += sizeof(struct iNode);
         }
@@ -65,25 +64,36 @@ bool init_freelist(){
     char buff[BLOCK_SIZE];
     size_t block_id = super_block->free_list_head;
     size_t dummy_value = 0;
+    // 1 will have details of 2 - 512
+    // 514 ...........        515 - 1026
     for(size_t i=0; i<FREE_LIST_BLOCKS; i++){
         size_t curr_block_id = block_id;
         memset(buff, dummy_value, BLOCK_SIZE);
         size_t offset = 0;
         for(size_t j=1; j<=DBLOCKS_PER_BLOCK; j++){
+            // not utilising the first available space in a freelist
+            // TODO : revisit
             offset += ADDRESS_SIZE;
-            block_id ++;
+            block_id++;
             if(block_id >= BLOCK_COUNT){
                 memcpy(buff+offset, &dummy_value, ADDRESS_SIZE);
             } else{
                 memcpy(buff+offset, &block_id, ADDRESS_SIZE);
             }
         }
+        block_id++;
+        // assigning next free_block_id at the first position
+        if(block_id >= BLOCK_COUNT){
+            memcpy(buff, &dummy_value, ADDRESS_SIZE);
+        } else{
+            memcpy(buff, &block_id, ADDRESS_SIZE);
+        }
         if(!write_block(curr_block_id, buff)){
             printf("Unable to write in the free list");
             return false;
         }
         if(block_id >= BLOCK_COUNT){
-            break;
+            break; // this wont happen but safe
         }
     }
     return true;
@@ -114,9 +124,10 @@ int create_new_dblock(){
     if(ans == 0){
         //freeList node itself is allocated as DataBlock
         ans = super_block->free_list_head;
+        // move free_list_head to the next free_list_block
         super_block->free_list_head = dblock_num_ptr[0];
         dblock_num_ptr[0] = 0;
-        printf("Freelist Node %d is noe a dblock\n", ans);
+        printf("Freelist Node %d is now a dblock\n", ans);
         if(!write_superblock()){
             return -1;
         }
@@ -155,6 +166,8 @@ bool free_dblock(int dblock_num){
     }
     char buff[BLOCK_SIZE];
     memset(buff, 0, BLOCK_SIZE);
+    // flushing the data (might be doing two times) TODO
+    write_block(dblock_num, buff);
     if(super_block->free_list_head==0){
         super_block->free_list_head = dblock_num;
         if(!write_superblock()){
@@ -174,6 +187,7 @@ bool free_dblock(int dblock_num){
         }
     }
     if(ans==0){
+        // dblock will be made the new free list which points to old one
         size_t temp = super_block->free_list_head;
         super_block->free_list_head = dblock_num;
         printf("Dblock %d is named as the free list head\n", dblock_num);
@@ -207,6 +221,7 @@ size_t inode_num_to_offset(int inode_num){
 }
 
 bool create_new_inode(){
+    // TODO: Worst case - O(N) for finding one even with use of latest inum
     if(!is_valid_inum(super_block->latest_inum)){
         printf("Invalid inode num being accessed or out of range");
         return false;
@@ -223,12 +238,13 @@ bool create_new_inode(){
             return false;
         }
         temp = (struct iNode* ) buff;
-        for(; offset<DBLOCKS_PER_BLOCK; offset++){
-            inode = temp + offset;
+        for(; offset<super_block->inodes_per_block; offset++){
+            inode = temp+offset;
             visit_count++;
-            if(!inode->allocated){
+            if(inode->allocated==false){
                 size_t ans = super_block->latest_inum;
-                super_block->latest_inum += visit_count;
+                // getting the new latest inum from block_id and offset
+                super_block->latest_inum += ((block_id-1)*super_block->inodes_per_block)+offset;
                 inode->allocated = true;
                 DEBUG_PRINTF("Inum %03d Block %03d Offset %03d allocated\n", ans, block_id, offset);
                 return ans;
@@ -242,12 +258,12 @@ bool create_new_inode(){
 }
 
 struct iNode* read_inode(int inode_num){
-    if(!is_valid_inum(super_block->latest_inum)){
+    if(!is_valid_inum(inode_num)){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
-    size_t block_id = inode_num_to_block_id(super_block->latest_inum);
-    size_t offset = inode_num_to_offset(super_block->latest_inum);
+    size_t block_id = inode_num_to_block_id(inode_num);
+    size_t offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
@@ -260,12 +276,12 @@ struct iNode* read_inode(int inode_num){
 }
 
 bool write_inode(int inode_num, struct iNode* inode){
-    if(!is_valid_inum(super_block->latest_inum)){
+    if(!is_valid_inum(inode_num)){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
-    size_t block_id = inode_num_to_block_id(super_block->latest_inum);
-    size_t offset = inode_num_to_offset(super_block->latest_inum);
+    size_t block_id = inode_num_to_block_id(inode_num);
+    size_t offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
@@ -284,8 +300,8 @@ bool free_dblocks_from_inode(struct iNode* inode){
     bool done = false;
     char dblock_list_buff[BLOCK_SIZE];
     char single_indirect_block_buff[BLOCK_SIZE];
-    int* dblock_list_ptr;
-    int* single_indirect_block_ptr;
+    size_t* dblock_list_ptr;
+    size_t* single_indirect_block_ptr;
     // freeing direct block
     for(size_t i=0; i<DIRECT_B_COUNT; i++){
         if(inode->direct_blocks[i]==0){
@@ -354,14 +370,12 @@ bool free_dblocks_from_inode(struct iNode* inode){
 }
 
 bool free_inode(int inode_num){
-    int block_id = inode_num_to_block_id(super_block->latest_inum);
-    if(block_id<0){
+    if(!is_valid_inum(inode_num)){
+        printf("Invalid inode num being accessed or out of range");
         return false;
     }
-    int offset = inode_num_to_offset(super_block->latest_inum);
-    if(offset<0){
-        return false;
-    }
+    size_t block_id = inode_num_to_block_id(inode_num);
+    size_t offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
