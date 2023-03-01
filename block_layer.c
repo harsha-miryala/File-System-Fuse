@@ -89,44 +89,48 @@ bool init_freelist(){
     return true;
 }
 
-bool create_new_dblock(){
+int create_new_dblock(){
     if(super_block->free_list_head == 0)
     {
         printf("No more blocks left\n");
-        return false;
+        return -1;
     }
     char buff[BLOCK_SIZE];
-    if(read_block(super_block->free_list_head, buff)){
-        int dBlockNum;
-        int *dBlockNum_ptr=(int *)buff;
-        int res=0;
-        for(int i=1;i<DBLOCKS_PER_BLOCK;i++){
-            dBlockNum=dBlockNum_ptr[i];
-            if(dBlockNum!=0){
-                // the dblock is free and we are alloting this
-                dBlockNum_ptr[i]=0;
-                res= dBlockNum;
-                break;
-            }
-        }
-        int temp = super_block->free_list_head;
-        if(res==0){
-            //freeList node itself is allocated as DataBlock
-            res= super_block->free_list_head;
-            super_block->free_list_head=dblock_num_ptr[0];
-            dBlockNum_ptr[0]=0;
-
-            return write_superblock();
-        }
-        return write_block(temp, buff);
+    if(!read_block(super_block->free_list_head, buff)){
+        return -1;
     }
-    return false;
-
+    size_t dblock_num;
+    size_t *dblock_num_ptr = (size_t *)buff;
+    size_t ans = 0;
+    for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
+        if(dblock_num_ptr[i]!=0){
+            // the dblock is free and we are allotting this
+            dblock_num_ptr[i]=0;
+            ans = dblock_num;
+            break;
+        }
+    }
+    size_t temp = super_block->free_list_head;
+    if(ans == 0){
+        //freeList node itself is allocated as DataBlock
+        ans = super_block->free_list_head;
+        super_block->free_list_head = dblock_num_ptr[0];
+        dblock_num_ptr[0] = 0;
+        printf("Freelist Node %d is noe a dblock\n", ans);
+        if(!write_superblock()){
+            return -1;
+        }
+    }
+    if(!write_block(temp, buff)){
+        printf("Could not write free_list block\n");
+        return -1;
+    }
+    return ans;
 }
 
 char *read_dblock(int dblock_num){
     if(dblock_num <= INODE_B_COUNT || dblock_num > BLOCK_COUNT){
-        printf("ERROR READING BLOCK_LAYER: Invalid data block number %d provided", dblock_num);
+        printf("Invalid data block number %d provided", dblock_num);
         return NULL;
     }
     char *buff= (char *)malloc(BLOCK_SIZE);
@@ -136,16 +140,58 @@ char *read_dblock(int dblock_num){
     return NULL;
 }
 
-bool write_dblock(int dblock_num, char *buf){
+bool write_dblock(int dblock_num, char *buff){
     if(dblock_num <= INODE_B_COUNT || dblock_num > BLOCK_COUNT){
-        printf("Error writing block layer: Invalid data block number %d provided", dblock_num);
+        printf("Invalid data block number %d provided\n", dblock_num);
         return false;
     }
-    if(write_block(dblock_num, buf)){
-        return true;
+    return write_block(dblock_num, buff);
+}
+
+bool free_dblock(int dblock_num){
+    if(dblock_num <= INODE_B_COUNT || dblock_num > BLOCK_COUNT){
+        printf("Invalid data block number %d provided\n", dblock_num);
+        return false;
     }
-    printf("Invalid data_block write");
-    return false;
+    char buff[BLOCK_SIZE];
+    memset(buff, 0, BLOCK_SIZE);
+    if(super_block->free_list_head==0){
+        super_block->free_list_head = dblock_num;
+        if(!write_superblock()){
+            return false;
+        }
+    }
+    if(!read_block(super_block->free_list_head, buff)){
+        return false;
+    }
+    size_t* dblock_num_ptr = (size_t*) buff;
+    int ans = 0;
+    for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
+        if(dblock_num_ptr[i]==0){
+            dblock_num_ptr[i] = dblock_num;
+            ans = 1;
+            break;
+        }
+    }
+    if(ans==0){
+        size_t temp = super_block->free_list_head;
+        super_block->free_list_head = dblock_num;
+        printf("Dblock %d is named as the free list head\n", dblock_num);
+        if(!write_superblock()){
+            return false;
+        }
+        memset(buff, 0, BLOCK_SIZE);
+        memcpy(buff, &temp, ADDRESS_SIZE);
+        if(!write_block(dblock_num, buff)){
+            return false;
+        }
+    }
+    else{
+        if(!write_block(super_block->free_list_head, buff)){
+            return false;
+        }
+    }
+    return true;
 }
 
 bool is_valid_inum(size_t inode_num){
