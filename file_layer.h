@@ -94,11 +94,11 @@ struct in_core_dir find_file(const char *const name, const struct iNode* const p
 
 int custom_truncate(const char* path, size_t offset);
 
-int custom_unlik(const char* path);
+int custom_unlink(const char* path);
 
-bool custom_close(int file_descriptor);
+int custom_close(int file_descriptor);
 
-int custom_open();
+int custom_open(const char* path, int oflag);
 
 ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset);
 

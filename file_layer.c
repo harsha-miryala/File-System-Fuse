@@ -124,7 +124,47 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
     return true;
 }
 
-struct in_core_dir find_file(const char *const name, const struct iNode* const parent_inode){}
+// TODO: VERIFY
+struct in_core_dir find_file(const char* const name, const struct iNode* const parent_inode){
+    struct in_core_dir file;
+    file.prev_entry = -1;
+    if(!S_ISDIR(parent_inode->mode)){
+        file.start_pos = -1;
+        return file;
+    }
+    int name_length = strlen(name);
+    for(int i=0; i<parent_inode->num_blocks; i++){
+        file.dblock_num = fblock_num_to_dblock_num(parent_inode, i);
+        file.fblock_num = i;
+        file.prev_entry = -1;
+        if(file.dblock_num<=0){
+            file.start_pos = -1;
+            return file;
+        }
+        file.dblock = read_dblock(file.dblock_num);
+        int curr_pos = 0;
+        while(curr_pos<BLOCK_SIZE){
+            if(((int*) (file.dblock+curr_pos))[0]!=0){
+                int str_start = curr_pos + INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ;
+                unsigned short str_length = ((unsigned short*) (file.dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];
+                if(str_length==name_length && strncmp(file.dblock+str_start, name, name_length)==0){
+                    file.start_pos = curr_pos;
+                    return file;
+                }
+            }
+            int next_entry = ((int*) (file.dblock+curr_pos+INODE_SZ))[0];
+            if(next_entry<=0){
+                file.start_pos = -1;
+                return file;
+            }
+            file.prev_entry = curr_pos;
+            curr_pos += next_entry;
+        }
+    }
+    file.start_pos = -1;
+    file.prev_entry = -1;
+    return file;
+}
 
 bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
     int fblock_num = inode->num_blocks;
@@ -454,13 +494,68 @@ bool custom_mknod(const char* path, mode_t mode, dev_t dev){
     return true;
 }
 
-int custom_truncate(const char* path, size_t offset){}
+int custom_truncate(const char* path, size_t offset){
+    int inode_num = get_inode_num_from_path(path);
+    if(inode_num==-1){
+        return -1;
+    }
+    struct iNode* inode = read_inode(inode_num);
+    if(offset>inode->file_size){
+        free_memory(inode);
+        return -1;
+    }
+    if(offset==0 && inode->file_size==0){
+        free_memory(inode);
+        return 0;
+    }
+    size_t curr_block = offset/BLOCK_SIZE;
+    if(inode->num_blocks > curr_block+1){
+        remove_dblocks_from_inode(inode, curr_block+1);
+    }
+    // get_curr_block
+    int dblock_num = fblock_num_to_dblock_num(inode, curr_block);
+    if(dblock_num<=0){
+        return -1;
+    }
+    char* dblock_buff = read_dblock(dblock_num);
+    int block_offset = offset % BLOCK_SIZE;
+    memset(dblock_buff+block_offset, 0, BLOCK_SIZE-block_offset);
+    write_dblock(dblock_num, dblock_buff);
+    free_memory(dblock_buff);
+    inode->file_size = offset;
+    write_inode(inode_num, inode);
+    free_memory(inode);
+    return 0;
+}
 
-int custom_unlik(const char* path){}
+int custom_unlink(const char* path){}
 
-bool custom_close(int file_descriptor){}
+int custom_open(const char* path, int oflag){
+    int inode_num = get_inode_num_from_path(path);
+    // create file
+    if(oflag & O_CREAT && inode_num<=-1){
+        struct iNode* inode = NULL;
+        inode_num = create_new_file(path, &inode, S_IFREG|DEFAULT_PERMS);
+        if(inode_num<=-1){
+            return -1;
+        }
+        write_inode(inode_num, inode);
+        free_memory(inode);
+    }
+    // Truncate
+    if(oflag & O_TRUNC){
+        if(custom_truncate(path, 0)==-1){
+            return -1;
+        }
+    }
+    return inode_num;
+}
 
-int custom_open(){}
+int custom_close(int file_descriptor){
+    // TODO
+    file_descriptor = 0;
+    return 0;
+}
 
 ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){}
 
