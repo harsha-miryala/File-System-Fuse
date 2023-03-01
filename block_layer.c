@@ -220,7 +220,7 @@ size_t inode_num_to_offset(int inode_num){
     return inode_num % super_block->inodes_per_block;
 }
 
-bool create_new_inode(){
+int create_new_inode(){
     // TODO: Worst case - O(N) for finding one even with use of latest inum
     if(!is_valid_inum(super_block->latest_inum)){
         printf("Invalid inode num being accessed or out of range");
@@ -254,7 +254,7 @@ bool create_new_inode(){
         block_id = (block_id%INODE_B_COUNT) + 1;
     }
     printf("Unable to find memory for inode\n");
-    return false;
+    return -1;
 }
 
 struct iNode* read_inode(int inode_num){

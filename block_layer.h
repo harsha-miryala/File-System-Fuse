@@ -46,9 +46,9 @@ allocates a new inode and returns the inode_num
 Inputs:
     inode_num: the num associated with the inode
 Returns:
-    true / false
+    inode num / -1;
 */
-bool create_new_inode();
+int create_new_inode();
 
 /*
 returns the inode associated with inode_num
