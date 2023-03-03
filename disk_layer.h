@@ -5,18 +5,30 @@
 #include <stdio.h>
 
 //volume device has to be defined here
+#ifdef DISK
+#define BLOCK_DEVICE "/dev/vdb"
+#define FS_SIZE 32212254720
+//30 GB
+#else
 //currently implementing in memory FS
-
 #define FS_SIZE 104857600
 //100 MB
+#endif
+
 #define BLOCK_SIZE 4096
 //4 KB
 #define BLOCK_COUNT (FS_SIZE/BLOCK_SIZE)
 // Total number of blocks ... in this case ~ 25000 (less than max size of int)
 
+// this allocated memory, true/false for success
 bool alloc_memory();
+// deallocates memory, true/false
 bool dealloc_memory();
+// reads data from block_id into buffer
 bool read_block(int block_id, char *buffer);
+// writes data into block_id from buffer
 bool write_block(int block_id, char *buffer);
+// de-reference the pointer to nothing
 void free_memory(void *ptr);
+
 #endif
