@@ -7,14 +7,30 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <fcntl.h>
-#include <fuse.h>
 
 #include "disk_layer.h"
 
 // global vars
+#ifdef DISK
+static size_t m_ptr;
+#else
 static char* m_ptr;
+#endif
 
 bool alloc_memory(){
+#ifdef DISK
+    m_ptr = open(BLOCK_DEVICE, O_RDWR);
+    if(m_ptr==-1){
+        return false;
+    }
+    char buff[BLOCK_SIZE];
+    memset(&buff, 0, BLOCK_SIZE);
+    for(int i=0; i<BLOCK_COUNT; i++){
+        if(!write_block(i, buff)){
+            return false;
+        }
+    }
+#else
     m_ptr = (char *) malloc(FS_SIZE);
     if(!m_ptr){
         printf("Error allocating file system memory for disk");
@@ -25,17 +41,24 @@ bool alloc_memory(){
         printf("Succesfully allocated memory for disk \n");
 	printf("address is %p \n", &m_ptr);
         printf("value at m_ptr:%c\n",*m_ptr);
+#endif
 	return true;
 }
 
 bool dealloc_memory(){
+#ifdef DISK
+    if(close(m_ptr)!=0){
+        return false;
+    }
+#else
     if(!m_ptr){
         printf("No disk memory to deallocate");
         return false;
     }
     free_memory(m_ptr);
+#endif
     printf("Succesfully de-allocated memory for disk \n");
-    return false;
+    return true;
 }
 
 bool read_block(int block_id, char *buffer){
@@ -46,9 +69,20 @@ bool read_block(int block_id, char *buffer){
         printf("Invalid read of block index - out of range");
         return false;
     }
+#ifdef DISK
+    off_t offset = (unsigned long) BLOCK_SIZE * block_id;
+    off_t status = lseek(m_ptr, offset, SEEK_SET);
+    if(status == -1){
+        return false;
+    }
+    if(read(m_ptr, buffer, BLOCK_SIZE) != BLOCK_SIZE){
+        return false;
+    }
+#else
     int offset = BLOCK_SIZE * block_id;
     memcpy(buffer, m_ptr+offset, BLOCK_SIZE);
-    return false;
+#endif
+    return true;
 }
 
 bool write_block(int block_id, char *buffer){
@@ -59,19 +93,24 @@ bool write_block(int block_id, char *buffer){
         printf("Invalid write for block index - out of range");
         return false;
     }
+#ifdef DISK
+    off_t offset = (unsigned long) BLOCK_SIZE * block_id;
+    off_t status = lseek(m_ptr, offset, SEEK_SET);
+    if(status == -1){
+        return false;
+    }
+    if(write(m_ptr, buffer, BLOCK_SIZE) != BLOCK_SIZE){
+        return false;
+    }
+#else
     int offset = BLOCK_SIZE * block_id;
     memcpy(m_ptr+offset, buffer, BLOCK_SIZE);
-    return false;
+#endif
+    return true;
 }
 
 void free_memory(void *ptr){
     if(ptr!=NULL){
         free(ptr);
     }
-}
-
-int main(){
-	alloc_memory();
-	dealloc_memory();
-	return 0;
 }
