@@ -413,7 +413,7 @@ bool free_inode(int inode_num){
 
 bool make_fs(){
     // this calls disk layer
-    if(allocate_memory()){
+    if(alloc_memory()){
         printf("Memory allocation for block failed \n");
         return false;
     }

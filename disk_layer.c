@@ -7,7 +7,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <fcntl.h>
-#include <fuse.h>
+// #include <fuse.h>
 
 #include "disk_layer.h"
 
