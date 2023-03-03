@@ -35,12 +35,12 @@ void init_hash_table(hash_table* hash_map, unsigned long size) {
     hash_map->size = size;
     hash_map->values = malloc(sizeof(int) * size);
     memset(hash_map->values, 0, sizeof(int) * size);
-    hash_map->keys = malloc(sizeof(char *) * size);
-    memset(hash_map->keys, 0, sizeof(char *) * size);
+    hash_map->keys = malloc(sizeof(char*) * size);
+    memset(hash_map->keys, 0, sizeof(char*) * size);
 }
 
 // DJB2 Hash function
-unsigned long get_hash(const char *str) {
+unsigned long get_hash(const char* str) {
     unsigned long hash = 5381;
     int curr_char;
     while (curr_char = *str++)
