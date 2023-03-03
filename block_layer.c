@@ -280,7 +280,9 @@ struct iNode* read_inode(int inode_num){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
+    //get BlockId which contains the inode.
     size_t block_id = inode_num_to_block_id(inode_num);
+    // get offset within the blockId to point to exact inode struct
     size_t offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
@@ -289,6 +291,7 @@ struct iNode* read_inode(int inode_num){
     struct iNode* inode = (struct iNode*)buff;
     inode = inode + offset;
     struct iNode* ans = (struct iNode*)malloc(sizeof(struct iNode));
+    //read inode to a buff and return the buff
     memcpy(ans, inode, sizeof(struct iNode));
     return ans;
 }
@@ -298,7 +301,9 @@ bool write_inode(int inode_num, struct iNode* inode){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
+    //get BlockId which contains the inode.
     size_t block_id = inode_num_to_block_id(inode_num);
+    // get offset within the blockId to point to exact inode struct
     size_t offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
@@ -306,6 +311,7 @@ bool write_inode(int inode_num, struct iNode* inode){
     }
     struct iNode* temp = (struct iNode*)buff;
     temp = temp + offset;
+    //update the blockId with the inum data
     memcpy(temp, inode, sizeof(struct iNode));
     if(write_block(block_id, buff)){
         return false;
@@ -344,6 +350,7 @@ bool free_dblocks_from_inode(struct iNode* inode){
             done = true;
             break;
         }
+        //free individual datablocks referred in Single Indirect block
         if(!free_dblock(dblock_list_ptr[i])){
             return false;
         }
@@ -364,6 +371,7 @@ bool free_dblocks_from_inode(struct iNode* inode){
             done = true;
             break;
         }
+        //read individual single indirect block within double indirect block and free the datablocks within them
         if(!read_block(single_indirect_block_ptr[i], dblock_list_buff)){
             return false;
         }
@@ -400,6 +408,8 @@ bool free_inode(int inode_num){
     }
     struct iNode* temp = (struct iNode*)buff;
     temp = temp + offset;
+
+    // freeing all the datablocks referred in inode && setting the allocated flag to false.
     if(!free_dblocks_from_inode(temp)){
         return false;
     }
