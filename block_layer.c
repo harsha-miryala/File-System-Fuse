@@ -32,7 +32,7 @@ bool init_superblock(){
 }
 
 bool init_inode_list(){
-    // TODO : Special place for indirect blocks needs to be added
+    // Indirect blocks will use Data blocks itself to store the addresses.
     struct iNode inode[sizeof(struct iNode)];
     for(size_t i=0; i<DIRECT_B_COUNT; i++){
         inode->direct_blocks[i] = 0; // using 0 because 0 can only be used by superblock
@@ -48,6 +48,7 @@ bool init_inode_list(){
     for(size_t block_id=1; block_id<=INODE_B_COUNT; block_id++){
         size_t offset = 0;
         memset(buff, dummy_value, BLOCK_SIZE);
+        // each i-node block will be initialized with stuct inode. 
         for(size_t i=0; i<super_block->inodes_per_block; i++){
             memcpy(buff+offset, inode, sizeof(struct iNode));
             offset += sizeof(struct iNode);
@@ -64,15 +65,14 @@ bool init_freelist(){
     char buff[BLOCK_SIZE];
     size_t block_id = super_block->free_list_head;
     size_t dummy_value = 0;
-    // 1 will have details of 2 - 512
-    // 514 ...........        515 - 1026
+     // 0th index will store the address of the next free list block that holds the addresses. 
+    // Eg: Block 100:
+    // 101-612, Block[0]=613
     for(size_t i=0; i<FREE_LIST_BLOCKS; i++){
         size_t curr_block_id = block_id;
         memset(buff, dummy_value, BLOCK_SIZE);
         size_t offset = 0;
         for(size_t j=1; j<=DBLOCKS_PER_BLOCK; j++){
-            // not utilising the first available space in a freelist
-            // TODO : revisit
             offset += ADDRESS_SIZE;
             block_id++;
             if(block_id >= BLOCK_COUNT){
@@ -112,6 +112,8 @@ int create_new_dblock(){
     size_t dblock_num;
     size_t *dblock_num_ptr = (size_t *)buff;
     size_t ans = 0;
+    //DBLOCKS_PER_BLOCK gives the number of block addresses a block can hold.
+    // iterating from 1st index because 0th index is used to point to the next free node.
     for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
         if(dblock_num_ptr[i]!=0){
             // the dblock is free and we are allotting this
@@ -132,6 +134,11 @@ int create_new_dblock(){
             return -1;
         }
     }
+    /*
+     Any point during the creation of free list, only the free_list_head is manipulated. Either get a free block from the free_list_head or the 
+     free_list_head itself is the new dblock.
+     Hence the free_list_head has to be updated. Hence the write operation.
+    */
     if(!write_block(temp, buff)){
         printf("Could not write free_list block\n");
         return -1;
@@ -144,6 +151,7 @@ char *read_dblock(int dblock_num){
         printf("Invalid data block number %d provided", dblock_num);
         return NULL;
     }
+    // reading the block data to the buffer and returning it.
     char *buff= (char *)malloc(BLOCK_SIZE);
     if(read_block(dblock_num, buff)){
         return buff;
@@ -156,6 +164,7 @@ bool write_dblock(int dblock_num, char *buff){
         printf("Invalid data block number %d provided\n", dblock_num);
         return false;
     }
+    //writing the block of data through the disk layer write_block call.
     return write_block(dblock_num, buff);
 }
 
@@ -169,6 +178,7 @@ bool free_dblock(int dblock_num){
     // flushing the data (might be doing two times) TODO
     write_block(dblock_num, buff);
     if(super_block->free_list_head==0){
+        // this is when all data blocks are used up and a data block becomes free. The newly freed block is now the head of free-list
         super_block->free_list_head = dblock_num;
         if(!write_superblock()){
             return false;
@@ -180,12 +190,15 @@ bool free_dblock(int dblock_num){
     size_t* dblock_num_ptr = (size_t*) buff;
     int ans = 0;
     for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
+        // if the free list head have one of the entry as 0, then that place can be updated with the block address of newly released block
         if(dblock_num_ptr[i]==0){
             dblock_num_ptr[i] = dblock_num;
             ans = 1;
             break;
         }
     }
+    // this is when all free list address is completely filled with addresses i.e it is fully occupied with free block addresses. In this case,
+    // the newly released dblock becomes the head of free list.
     if(ans==0){
         // dblock will be made the new free list which points to old one
         size_t temp = super_block->free_list_head;
@@ -195,6 +208,7 @@ bool free_dblock(int dblock_num){
             return false;
         }
         memset(buff, 0, BLOCK_SIZE);
+        //0th index of dblock_num points to previous free_list_head.
         memcpy(buff, &temp, ADDRESS_SIZE);
         if(!write_block(dblock_num, buff)){
             return false;
@@ -208,14 +222,17 @@ bool free_dblock(int dblock_num){
     return true;
 }
 
+//helper functions
 bool is_valid_inum(size_t inode_num){
     return inode_num>0 && inode_num<super_block->inode_count;
 }
 
+//which block contains the corresponding inode_num
 size_t inode_num_to_block_id(int inode_num){
     return 1 + (inode_num/super_block->inodes_per_block);
 }
 
+// offset with the blockId that points to the struct of inode_num
 size_t inode_num_to_offset(int inode_num){
     return inode_num % super_block->inodes_per_block;
 }
@@ -226,6 +243,7 @@ int create_new_inode(){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
+    // latest-inum is the next inum value from the prev allocated inum. Being used to improve the search.
     size_t block_id = inode_num_to_block_id(super_block->latest_inum);
     size_t offset = inode_num_to_offset(super_block->latest_inum);
     char buff[BLOCK_SIZE];
