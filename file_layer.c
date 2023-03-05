@@ -124,9 +124,11 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
     return true;
 }
 
-// TODO: VERIFY
+// TODO: VERIFY// Done
 struct in_core_dir find_file(const char* const name, const struct iNode* const parent_inode){
     struct in_core_dir file;
+    // if the file is found, the pointer to the inode is present in file.start_pos
+    // file.prev_entry holds the starting point of the preceding entry the file entry in question.
     file.prev_entry = -1;
     if(!S_ISDIR(parent_inode->mode)){
         file.start_pos = -1;
@@ -144,15 +146,15 @@ struct in_core_dir find_file(const char* const name, const struct iNode* const p
         file.dblock = read_dblock(file.dblock_num);
         int curr_pos = 0;
         while(curr_pos<BLOCK_SIZE){
-            if(((int*) (file.dblock+curr_pos))[0]!=0){
-                int str_start = curr_pos + INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ;
+            if(((int*) (file.dblock+curr_pos))[0]!=0){ //refers to inum for an entry
+                int str_start_pos = curr_pos + INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ;
                 unsigned short str_length = ((unsigned short*) (file.dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];
-                if(str_length==name_length && strncmp(file.dblock+str_start, name, name_length)==0){
+                if(str_length==name_length && strncmp(file.dblock+str_start_pos, name, name_length)==0){
                     file.start_pos = curr_pos;
                     return file;
                 }
             }
-            int next_entry = ((int*) (file.dblock+curr_pos+INODE_SZ))[0];
+            int next_entry = ((int*) (file.dblock+curr_pos+INODE_SZ))[0]; //rec_len corresponding to curr_pos
             if(next_entry<=0){
                 file.start_pos = -1;
                 return file;
@@ -161,6 +163,7 @@ struct in_core_dir find_file(const char* const name, const struct iNode* const p
             curr_pos += next_entry;
         }
     }
+    //record not found
     file.start_pos = -1;
     file.prev_entry = -1;
     return file;
