@@ -260,6 +260,7 @@ int create_new_inode(){
             inode = temp+offset;
             visit_count++;
             if(inode->allocated==false){
+                //allocating the corresponding inode.
                 size_t ans = super_block->latest_inum;
                 // getting the new latest inum from block_id and offset
                 super_block->latest_inum += ((block_id-1)*super_block->inodes_per_block)+offset;

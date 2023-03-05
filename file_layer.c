@@ -562,6 +562,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset){}
 
 bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
+    //if not directory, return false
     if(!S_ISDIR(inode->mode)){
         printf("not a directory\n");
         return false;
@@ -571,8 +572,9 @@ bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
         printf("Too long name for file\n");
         return false;
     }
-    unsigned short short_name_length = name_length;
+    unsigned short short_name_length = name_length; //strlen(inode_name)
     size_t new_entry_size = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + short_name_length;
+    //if there is already a datablock for the dir file, we will add entry to it if it has space
     if(inode->num_blocks!=0){
         int dblock_num = fblock_num_to_dblock_num(inode, inode->num_blocks-1);
         if(dblock_num<=0){
@@ -581,32 +583,41 @@ bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
         char* dblock = read_dblock(dblock_num);
         int curr_pos = 0;
         while(curr_pos < BLOCK_SIZE){
-            int next_entry = ((int*)(dblock+curr_pos+INODE_SZ))[0];
-            unsigned short entry_name_length = ((unsigned short* )(dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];
-            int entry_length = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + entry_name_length;
-            if(next_entry - entry_length >= new_entry_size){
+            /*
+            addr_ptr for earlier records holds the len/size of record. However, for the last record it holds the BLOCKSIZE-(sum of prev record len)
+            this is fetched in next_entry. 
+            For example, when the 1st entry is made to the block, the add_ptr holds the block size 4096
+            when a 2nd entry is made, the add_ptr of the 1st entry holds rec_len while the add_ptr of 2nd entry hols 4096-(sum of prev record len)
+            Hence, if BLOCK is able to accomodate more entries, it will be indicated in the add_ptr field of last entry.
+            */      
+            int next_entry_offset_from_curr = ((int*)(dblock+curr_pos+INODE_SZ))[0];
+            unsigned short curr_entry_name_length = ((unsigned short* )(dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];//len of filename/iname pointed by curr_pos
+            int curr_ptr_entry_length = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + curr_entry_name_length;
+            // the following condition holds true only for the last entry of the dir and if the block is able to accomodate new entry. Until the we move the curr_pos
+            if(next_entry_offset_from_curr - curr_ptr_entry_length >= new_entry_size){
                 // updating curr entry addr with size of entry
-                ((int* )(dblock+curr_pos+INODE_SZ))[0] = entry_length;
-                if(entry_length<=0){
+                ((int* )(dblock+curr_pos+INODE_SZ))[0] = curr_ptr_entry_length;
+                if(curr_ptr_entry_length<=0){
                     return false;
                 }
-                int addr_ptr = next_entry - entry_length;
-                curr_pos += entry_length;
+                int addr_ptr = next_entry_offset_from_curr - curr_ptr_entry_length; // this is essentially 4096-(sum of prev record len)
+                // This will even handle the padding.
+                curr_pos += curr_ptr_entry_length;
                 // add new entry
                 ((int*) (dblock+curr_pos))[0] = inode_num;
                 ((int*) (dblock+curr_pos+INODE_SZ))[0] = addr_ptr;
                 ((unsigned short*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
                 strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), inode_name, name_length);
-                // KYA CHAL RAHA H BC
+              
                 if(!write_dblock(dblock_num, dblock)){
                     return false;
                 }
                 return true;
             }
-            if(next_entry<=0){
+            if(next_entry_offset_from_curr<=0){
                 return false;
             }
-            curr_pos += next_entry;
+            curr_pos += next_entry_offset_from_curr;
         }
         free_memory(dblock);
     }
