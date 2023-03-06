@@ -11,6 +11,7 @@ static hash_table iName_cache;
 
 // Returns char array index of the last slash of parent's path
 int get_parent_id(const char* const path, int path_len){
+    // TODO: Ignore multiple consecutive or figure what should happen here "/" i.e. /dev/dvb/data//file.c
     for(int id=path_len-1; id>=0; id--){
         if(path[id]=='/' && id!=(path_len-1)){
             return id;
@@ -87,6 +88,7 @@ int fblock_num_to_dblock_num(const struct iNode* const inode, int fblock_num){
 }
 
 bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
+    // over-writing an existing block with a new block
     if((size_t)fblock_num > inode->num_blocks){
         printf("invalid file block num");
         return false;
@@ -170,6 +172,7 @@ struct in_core_dir find_file(const char* const name, const struct iNode* const p
 }
 
 bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
+    // adding a new data block in inode, num_blocks would already be incremented
     int fblock_num = inode->num_blocks;
     // if direct block
     if(fblock_num < DIRECT_B_COUNT){
@@ -263,6 +266,7 @@ bool remove_double_indirect(int dblock_num){
 }
 
 bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
+    // remove blocks from fblock_num to num_blocks from inode
     if(fblock_num >= inode->num_blocks){
         printf("Can't remove block that doesn't exist");
         return false;
@@ -324,9 +328,10 @@ bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
             free_memory(single_indirect_buff);
         }
         // removing remaining single indirect
+        // TODO : Can simplify this
         int double_indirect_total = curr_blocks - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT;
-        int single_blocks_to_free = (BLOCK_COUNT/ADDRESS_SIZE) - double_indirect_offset;
-        if(double_indirect_total/(BLOCK_COUNT/ADDRESS_SIZE) < single_blocks_to_free){
+        int single_blocks_to_free = SINGLE_INDIRECT_BLOCK_COUNT - double_indirect_offset;
+        if(double_indirect_total/SINGLE_INDIRECT_BLOCK_COUNT < single_blocks_to_free){
             single_blocks_to_free = double_indirect_total - double_indirect_offset;
         }
         for(int i=double_indirect_offset+1; i<double_indirect_offset+single_blocks_to_free; i++){
@@ -348,6 +353,7 @@ int get_inode_num_from_path(const char* const path){
     if(cached_inode_num>0){
         return cached_inode_num;
     }
+    // otherwise compute using recursive validation
     // get parent path
     char parent_path[path_len+1];
     if(!get_parent_path(parent_path, path, path_len)){
@@ -435,6 +441,7 @@ int create_new_file(const char* const path, struct iNode** buff, mode_t mode){
     (*buff)->creation_time = curr_time;
     (*buff)->status_change_time = curr_time;
     free_memory(parent_inode);
+    // TODO : write inode
     return child_inode_num;
 }
 
@@ -564,13 +571,17 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset){}
 
+<<<<<<< Updated upstream
 bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
     //if not directory, return false
+=======
+bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
+>>>>>>> Stashed changes
     if(!S_ISDIR(inode->mode)){
         printf("not a directory\n");
         return false;
     }
-    int name_length = strlen(inode_name);
+    int name_length = strlen(child_name);
     if(name_length > MAX_NAME_LENGTH){
         printf("Too long name for file\n");
         return false;
@@ -607,11 +618,16 @@ bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
                 // This will even handle the padding.
                 curr_pos += curr_ptr_entry_length;
                 // add new entry
-                ((int*) (dblock+curr_pos))[0] = inode_num;
+                ((int*) (dblock+curr_pos))[0] = child_inode_num;
                 ((int*) (dblock+curr_pos+INODE_SZ))[0] = addr_ptr;
                 ((unsigned short*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
+<<<<<<< Updated upstream
                 strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), inode_name, name_length);
               
+=======
+                strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), child_name, name_length);
+                // KYA CHAL RAHA H BC
+>>>>>>> Stashed changes
                 if(!write_dblock(dblock_num, dblock)){
                     return false;
                 }
@@ -630,11 +646,11 @@ bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
     }
     char dblock[BLOCK_SIZE];
     memset(dblock, 0, BLOCK_SIZE);
-    ((int*) dblock)[0] = inode_num;
+    ((int*) dblock)[0] = child_inode_num;
     size_t addr_ptr = BLOCK_SIZE;
     ((int*) (dblock+INODE_SZ))[0] = addr_ptr;
     ((unsigned short*) (dblock+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
-    strncpy((char*)(dblock+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), inode_name, name_length);
+    strncpy((char*)(dblock+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), child_name, name_length);
     if(!write_dblock(dblock_num, dblock)){
         return false;
     }
