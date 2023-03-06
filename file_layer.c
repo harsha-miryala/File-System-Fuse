@@ -571,12 +571,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset){}
 
-<<<<<<< Updated upstream
-bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name){
-    //if not directory, return false
-=======
 bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
->>>>>>> Stashed changes
     if(!S_ISDIR(inode->mode)){
         printf("not a directory\n");
         return false;
@@ -621,13 +616,7 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
                 ((int*) (dblock+curr_pos))[0] = child_inode_num;
                 ((int*) (dblock+curr_pos+INODE_SZ))[0] = addr_ptr;
                 ((unsigned short*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
-<<<<<<< Updated upstream
-                strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), inode_name, name_length);
-              
-=======
                 strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), child_name, name_length);
-                // KYA CHAL RAHA H BC
->>>>>>> Stashed changes
                 if(!write_dblock(dblock_num, dblock)){
                     return false;
                 }
@@ -658,6 +647,7 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
     inode->file_size += BLOCK_SIZE;
     return true;
 }
+
 
 bool init_file_layer(){
     if(!make_fs()){
