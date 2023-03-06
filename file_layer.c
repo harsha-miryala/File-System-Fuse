@@ -581,7 +581,7 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
         printf("Too long name for file\n");
         return false;
     }
-    unsigned short short_name_length = name_length; //strlen(inode_name)
+    unsigned short short_name_length = name_length;
     size_t new_entry_size = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + short_name_length;
     //if there is already a datablock for the dir file, we will add entry to it if it has space
     if(inode->num_blocks!=0){
