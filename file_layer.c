@@ -131,12 +131,14 @@ struct in_core_dir find_file(const char* const name, const struct iNode* const p
     /*
     Each file entry in the directory is stored in the following format.
     INUM, RECORD_LEN/ADDR_PTR, FILE_STR_LEN, FILE_NAME
-    INUM, RECORD_LEN/ADDR_PTR, FILE_STR_LEN sizes are predefined in file_layer.h as INODE_SZ, ADDRESS_PTR_SZ, STRING_LENGTH_SZ. Only the FILE_NAME size is variable based on len.
+    INUM, RECORD_LEN/ADDR_PTR, FILE_STR_LEN sizes are predefined in file_layer.h
+    as INODE_SZ, ADDRESS_PTR_SZ, STRING_LENGTH_SZ. Only the FILE_NAME size is variable based on len.
     */
     struct in_core_dir file;
     /*
     This data structure is what is returned.
-    It will hold the datablock containing the file_record, corresponding dBlock_num, fblock_num, pointer to the inode_num for the file (1st field of record) and a pointer to the record
+    It will hold the datablock containing the file_record, corresponding dBlock_num, fblock_num,
+    pointer to the inode_num for the file (1st field of record) and a pointer to the record
     previous to the file to be found. This is sent for the sake of manipulation wrt to records during deletion.
     */
     // if the file is found, the pointer to the inode is present in file.start_pos
@@ -147,25 +149,29 @@ struct in_core_dir find_file(const char* const name, const struct iNode* const p
         file.start_pos = -1;
         return file;
     }
+    // TODO : Check if name is in bounds, else return garbage
     int name_length = strlen(name);
-    //traverse through the datablocks in parent directory to find the entry for the file.
+    // traverse through the datablocks in parent directory to find the entry for the file.
     for(int i=0; i<parent_inode->num_blocks; i++){
         file.dblock_num = fblock_num_to_dblock_num(parent_inode, i);
         file.fblock_num = i;
-        file.prev_entry = -1; // prev_entry will ideally contain the pointer record which preceeds the file record. However, it will be initialied to -1 in the beginning for each block.
+        file.prev_entry = -1; // prev_entry will ideally contain the pointer record which preceeds the file record.
+        // However, it will be initialied to -1 in the beginning for each block.
         if(file.dblock_num<=0){
             file.start_pos = -1;
             return file;
         }
         file.dblock = read_dblock(file.dblock_num);
-        int curr_pos = 0;// curr_pos points to the beginning of a record that we are currently inspecting. It will be updated based on the record_len field of the curr_record.
-        /*
-        */
+        int curr_pos = 0;
+        // curr_pos points to the beginning of a record that we are currently inspecting.
+        // It will be updated based on the record_len field of the curr_record.
         while(curr_pos<BLOCK_SIZE){
             if(((int*) (file.dblock+curr_pos))[0]!=0){ //refers to inum for an entry
-                int str_start_pos = curr_pos + INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ;//points to the start of filename string for the record.
+                int str_start_pos = curr_pos + INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ;
+                //points to the start of filename string for the record.
                 unsigned short str_length = ((unsigned short*) (file.dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];
-                if(str_length==name_length && strncmp(file.dblock+str_start_pos, name, name_length)==0){ //checks if the file_name and len matches that with the curr_record
+                if(str_length==name_length && strncmp(file.dblock+str_start_pos, name, name_length)==0){
+                    //checks if the file_name and len matches that with the curr_record
                     file.start_pos = curr_pos;
                     return file;
                 }
@@ -456,7 +462,7 @@ int create_new_file(const char* const path, struct iNode** buff, mode_t mode){
     (*buff)->creation_time = curr_time;
     (*buff)->status_change_time = curr_time;
     free_memory(parent_inode);
-    // TODO : write inode
+    // TODO : write inode 
     return child_inode_num;
 }
 
@@ -480,8 +486,6 @@ bool custom_mkdir(const char* path, mode_t mode){
         free_memory(child_inode);
         return false;
     }
-    //TODO VERIFY: Ideally "." and ".." should have the inode values of curr and parent directory respectively? 
-    //For ".." ideally we should pass parent inode_num?
     char* name = ".";
     if(!add_new_entry(child_inode, child_inode_num, name)){
         free_memory(child_inode);
@@ -501,6 +505,7 @@ bool custom_mkdir(const char* path, mode_t mode){
 }
 
 bool custom_mknod(const char* path, mode_t mode, dev_t dev){
+    // TODO: Buggy code
     dev = 0; // Silence error until used
     struct iNode* child_inode = NULL;
 
@@ -537,6 +542,7 @@ int custom_truncate(const char* path, size_t offset){
     }
     size_t curr_block = offset/BLOCK_SIZE;
     if(inode->num_blocks > curr_block+1){
+        // this removes everything from curr_block+1
         remove_dblocks_from_inode(inode, curr_block+1);
     }
     // get_curr_block
@@ -555,21 +561,20 @@ int custom_truncate(const char* path, size_t offset){
     return 0;
 }
 
-//check the return type here. Bool or int?
-bool custom_unlink(const char* path){
+int custom_unlink(const char* path){
     size_t path_len = strlen(path);
 
-    ssize_t inum = get_inode_num_from_path(path);
+    int inum = get_inode_num_from_path(path);
 
     if(inum==-1){
         DEBUG_PRINTF("FILE LAYER UNLINK ERROR: Inode for %s not found\n", path);
-        return false;
+        return -1;
     }
-    struct inode *i_node= read_inode(inum);
+    struct iNode *inode= read_inode(inum);
     // if the path is a file and it is not empty.
-    if(S_ISDIR(i_node->mode) && !is_empty_dir(i_node)){
+    if(S_ISDIR(inode->mode) && !is_empty_dir(inode)){
         DEBUG_PRINTF("FILE LAYER ERROR: Unlink failed as the dir %s is not empty\n", path);
-        free_memory(i_node);
+        free_memory(inode);
         return -ENOTEMPTY;
     }
 
@@ -578,21 +583,21 @@ bool custom_unlink(const char* path){
     //should copy the parent path to buffer parent_path
     if(!get_parent_path(parent_path, path, path_len)){
         DEBUG_PRINTF("FILE LAYER ERROR: Failed to unlink %s\n",path);
-        free_memory(i_node);
+        free_memory(inode);
         return -EINVAL;
     }
 
-    size_t parent_inode_num = get_inode_num_from_path(parent_path);
+    int parent_inode_num = get_inode_num_from_path(parent_path);
 
     if(parent_inode_num == -1){
-        return false;
+        return -1;
     }
 
-    struct inode *parent_inode = read_inode(parent_inode_num);
+    struct iNode *parent_inode = read_inode(parent_inode_num);
 
     char child_name[path_len+1];
     if(!get_child_name(child_name, path, path_len)){
-        return false;
+        return -1;
     }
 
     //find the location of the path file entry in the parent.
@@ -600,7 +605,7 @@ bool custom_unlink(const char* path){
     
     // Didnt find file in parent
     if(file.start_pos == -1){
-        return false;
+        return -1;
     }
 
     int next_entry_offset_from_curr = ((int *)(file.dblock + file.start_pos + INODE_SZ))[0];
@@ -608,40 +613,38 @@ bool custom_unlink(const char* path){
         // There is a preceeding record to the curr record entry
         // Need to increment its pointer by this pointer
         // so we dont traverse that record in the future.
+        // this means F1, F2, F3 and now we delete F3 and free it up or delete F2 and then point from F1 to F3
         ((int *)(file.dblock + file.prev_entry + INODE_SZ))[0]+= next_entry_offset_from_curr;
     }  
     else if(file.start_pos == 0 && next_entry_offset_from_curr != BLOCK_SIZE){
-         //this is the first entry in the directory and it is followed by other entries
+        //this is the first entry in the directory and it is followed by other entries
         // Move next entry to the start of block
+        // F1, F2, F3 and if you delete F1, F2 will be moved to F1 while also updating offset
         unsigned short next_entry_name_len = ((unsigned short *)(file.dblock + next_entry_offset_from_curr + INODE_SZ + ADDRESS_PTR_SZ))[0];//next entry namestr len
         size_t next_entry_len = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + next_entry_name_len;
         memcpy(file.dblock, file.dblock+ next_entry_offset_from_curr, next_entry_len); //2nd entry is copied to 1st entry
         ((int *)(file.dblock + INODE_SZ))[0] += next_entry_offset_from_curr;//record size is updated to include both entries.
         write_dblock(file.dblock_num, file.dblock);
     }
-    else if(file.start_pos ==0){
+    else if(file.start_pos==0){
         //Remove Datablock
         ssize_t end_dblock_num = fblock_num_to_dblock_num(parent_inode, parent_inode->num_blocks-1);
         ssize_t curr_dblock_num = fblock_num_to_dblock_num(parent_inode, file.dblock_num);
         if(curr_dblock_num <=0){
-            return false;
+            return -1;
         }
         if(end_dblock_num <=0){
             return -1;
         }
         free_dblock(curr_dblock_num);
-        //TODO VERIFY PLZ
-        // What are we doing down here? We might not need the if block below.
-        if(end_dblock_num <= 0){
-            return -1;
-        }
+        // replace the removed block num with the end block
         write_dblock_to_inode(parent_inode, file.fblock_num, end_dblock_num);
         parent_inode->num_blocks--;
     }
-
+    hash_remove(&iName_cache, path);
     free_memory(file.dblock);
 
-    time_T curr_time = time(NULL);
+    time_t curr_time = time(NULL);
     parent_inode->access_time = curr_time;
     parent_inode->modification_time = curr_time;
     parent_inode->status_change_time = curr_time;
@@ -651,20 +654,20 @@ bool custom_unlink(const char* path){
     if(inode->link_count==0){
         //if link_count is 0, the file has to be deleted.
         free_inode(inum);
-        hash_remove(&iName_cache, path);
     }
     else{
-        inode->curr_time = curr_time;
+        inode->status_change_time = curr_time;
         write_inode(inum, inode);
     }
     //updating parent inode
     write_inode(parent_inode_num, parent_inode);
     free_memory(parent_inode);
     free_memory(inode);
-    return true;
+    return 0;
 }
 
 int custom_open(const char* path, int oflag){
+    // open a file, if not there create one, else existing one by scraping everything if asked
     int inode_num = get_inode_num_from_path(path);
     // create file
     if(oflag & O_CREAT && inode_num<=-1){
@@ -703,20 +706,20 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
         return -1;
     }
 
-    struct inode *i_node= read_inode(inum);
+    struct iNode *inode= read_inode(inum);
 
-    if (i_node->file_size == 0) {
+    if (inode->file_size == 0) {
         return 0;
     }
 
-    if (offset > i_node->file_size) {
-        printf("ERROR: Offset %zu for read is greater than size of the file %d\n", offset, i_node->file_size);
+    if (offset > inode->file_size) {
+        printf("ERROR: Offset %zu for read is greater than size of the file %d\n", offset, inode->file_size);
         return -1;
     }
 
     //update nbytes when read_len from offset exceeds file_size. 
-    if (offset + nbytes > i_node->file_size)
-        nbytes = i_node->file_size - offset;
+    if (offset + nbytes > inode->file_size)
+        nbytes = inode->file_size - offset;
 
     size_t start_block = offset / BLOCK_SIZE;
     size_t start_block_top_ceil = offset % BLOCK_SIZE;
@@ -726,7 +729,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 
     size_t nblocks_read = start_block - end_block + 1;
 
-    DEBUG_PRINTF("INFO: Total number of blocks to read: %i\n", nblocks_read);//do we need it?
+    DEBUG_PRINTF("Total number of blocks to read: %i\n", nblocks_read);
 
     size_t bytes_read = 0;
     size_t dblock_num;
@@ -736,7 +739,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
         //only 1 block to be read;
         dblock_num=fblock_num_to_dblock_num(inode,start_block);
         if(dblock_num<=0){
-            printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block+i,i_node->num_blocks);
+            printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block,inode->num_blocks);
             return -1;
         }
 
@@ -750,11 +753,11 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
     }
     else{
         //when there are multiple blocks to read
-        for(size_t i=0; i< nblocks_read;i++){
-            dblock_num=fblock_num_to_dblock_num(i_node, start_block+i);
+        for(size_t i=0; i<nblocks_read;i++){
+            dblock_num=fblock_num_to_dblock_num(inode, start_block+i);
             if(dblock_num<=0){
-                printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block+i,i_node->num_blocks);
-                free_memory(i_node);
+                printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block+i,inode->num_blocks);
+                free_memory(inode);
                 return -1;
             }
 
@@ -762,7 +765,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 
             if(buf_read == NULL){
                 printf("Error fetching dblock_num %d during the read operation for %d\n",dblock_num,path);
-                free_memory(i_node);
+                free_memory(inode);
                 return -1;
             }
             // for the 1st block, read only the contents after the start ceil.
@@ -773,7 +776,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
             else if(i== nblocks_read-1){
                 // for the last block, read contents only till the bottom floor.
                 memcpy(buff+bytes_read, buf_read, BLOCK_SIZE-end_block_bottom_floor);
-                bytes_read+= BLOCK_SIZE-end_block_bottom_floor;
+                bytes_read+=BLOCK_SIZE-end_block_bottom_floor;
             }
             else{
                 memcpy(buff+bytes_read, buf_read, BLOCK_SIZE);
@@ -783,13 +786,13 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
     }
     free_memory(buf_read);
     DEBUG_PRINTF("FILE_LAYER: Read Successful for the file %s\n",path);
-    time_t curr_time= time(NULL);
-    i_node->access_time= curr_time;
+    time_t curr_time = time(NULL);
+    inode->access_time = curr_time;
 
-   if(!write_inode(inum, i_node)){
+    if(!write_inode(inum, inode)){
         printf("Error: INODE update during file read failed for file %s\n",path);
-   }
-   free_memory(i_node);
+    }
+    free_memory(inode);
     return bytes_read; 
 }
 
@@ -797,88 +800,88 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 // on failure what to return?
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset){
     size_t inum= get_inode_num_from_path(path);
-   if (inum == -1) {
+    if (inum == -1) {
         printf("ERROR in FILE_LAYER: Unable to find Inode for file %s\n", path);
         return -1;
     }
 
-    struct inode *i_node = read_inode(inum);
+    struct iNode *inode = read_inode(inum);
     size_t bytes_to_add=0;
 
-    if(offset + nbytes > i_node->file_size){
+    if(offset + nbytes > inode->file_size){
         //add new blocks; 
-        bytes_to_add=(offset + nbytes)- i_node->file_size;
+        bytes_to_add=(offset + nbytes) - inode->file_size;
         size_t new_block_count = (offset + nbytes) / BLOCK_SIZE - inode->num_blocks +1;
-        DEBUG_PRINTF("FILE LAYER: Total new blocks being added to the file is %d\n". new_block_count);
+        DEBUG_PRINTF("Total new blocks being added to the file is %d\n". new_block_count);
         size_t new_block_id;
 
-        for(size_t i=0 < new_block_count ; i++){
+        for(size_t i=0; i<new_block_count; i++){
             new_block_id = create_new_dblock();
-            if(new_block_id <=0){
-                printf("Error FILE LAYER: Failed to allocated new Data_Block for the write operation for the file %s\n", path);
-                free_memory(i_node);
+            if(new_block_id<=0){
+                printf("Failed to allocated new Data_Block for the write operation for the file %s\n", path);
+                free_memory(inode);
                 return -1;
             }
 
-            if(!add_dblock_to_inode(i_node, new_block_id)){
-                printf("Error FILE LAYER: New Data Block addition to inode failed for file %s\n", path);
-                free_memory(i_node);
+            if(!add_dblock_to_inode(inode, new_block_id)){
+                printf("New Data Block addition to inode failed for file %s\n", path);
+                free_memory(inode);
                 return -1;
             }
         }
     }
 
     size_t start_block= offset / BLOCK_SIZE;
-    size_t start_block_top_ceil = offset % BLOCK_SIZE
+    size_t start_block_top_ceil = offset % BLOCK_SIZE;
 
-    size_t end_block= (offset + nbytes) / BLOCK_SIZE;
-    size_t end_block_bottom_floor = BLOCK_SIZE - (offset + bytes)% BLOCK_SIZE;
+    size_t end_block = (offset + nbytes) / BLOCK_SIZE;
+    size_t end_block_bottom_floor = BLOCK_SIZE - (offset + nbytes)% BLOCK_SIZE;
 
     size_t nblocks_write = end_block - start_block + 1;
 
-    DEBUG_PRINTF(" FILE LAYER: writing %d blocks to file\n", nblocks_write);
+    DEBUG_PRINTF("writing %d blocks to file\n", nblocks_write);
 
     size_t bytes_written=0;
     char *buf_read = NULL;
 
     // if there is only 1 block to write
     if(nblocks_write ==1){
-        dblock_num = fblock_num_to_dblock_num(i_node, start_block);
+        int dblock_num = fblock_num_to_dblock_num(inode, start_block);
         if(dblock_num<=0){
-            printf("ERROR FILE LAYER: Error getting dblocknum from Fblock_num during %d block write for %s\n",start_block, path);
-            free_memory(i_node);
+            printf("Error getting dblocknum from Fblock_num during %d block write for %s\n",start_block, path);
+            free_memory(inode);
             return -1;
         }
 
         buf_read = read_dblock(dblock_num);
         if(buf_read == NULL){
-            printf("Error FILE LAYER: Error encountered reading dblocknum %d during %s write\n", dblock_num, path);
-            free_memory(i_node);
+            printf("Error encountered reading dblocknum %d during %s write\n", dblock_num, path);
+            free_memory(inode);
             return -1;
         }
         
         memcpy(buf_read+start_block_top_ceil, buff, nbytes);
 
         if(!write_dblock(dblock_num, buf_read)){
-            printf("FILE LAYER ERROR: Error writing to dblock_num %d during %s write", dblock_num, path);
+            printf("Error writing to dblock_num %d during %s write", dblock_num, path);
             free_memory(buf_read);
-            free_memory(i_node);
+            free_memory(inode);
             return -1;
         }
     }
     else{
-        for(size_t i=0; i < nblocks_write ;i++ ){
-            dblock_num= fblock_num_to_dblock_num(i_node, start_block+i);
+        for(size_t i=0; i<nblocks_write; i++){
+            int dblock_num = fblock_num_to_dblock_num(inode, start_block+i);
             if(dblock_num<=0){
-                printf("ERROR FILE_LAYER: Error in fetching the dblock_num from fblock_num %d for %s\n", start_block+i, path);
-                free_memory(i_node);
+                printf("Error in fetching the dblock_num from fblock_num %d for %s\n", start_block+i, path);
+                free_memory(inode);
                 return -1;
             }
 
             buf_read=read_dblock(dblock_num);
             if(buf_read == NULL){
-                printf("FILE LAYER ERROR: Error reading dblock_num %d during the write of file %s\n",dblock_num, path);
-                free_memory(i_node);
+                printf("Error reading dblock_num %d during the write of file %s\n",dblock_num, path);
+                free_memory(inode);
                 return -1;
             }
 
@@ -887,7 +890,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
                 memcpy(buf_read + start_block_top_ceil, buff + bytes_written, BLOCK_SIZE - (start_block_top_ceil));
                 bytes_written+= BLOCK_SIZE-start_block_top_ceil;
             }
-            else if(i == nblocks_write -1){
+            else if(i==nblocks_write-1){
                 //last block to be written
                 memcpy(buf_read, buff + bytes_written, BLOCK_SIZE- end_block_bottom_floor);
                 bytes_written+= BLOCK_SIZE - end_block_bottom_floor;
@@ -897,9 +900,9 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
                 bytes_written += BLOCK_SIZE;
             }
             if(!write_dblock(dblock_num, buf_read)){
-                printf("FILE LAYER ERROR: Error in writing to %d dblock_num during the write of %s\n", dblock_num, path);
+                printf("Error in writing to %d dblock_num during the write of %s\n", dblock_num, path);
                 free_memory(buf_read);
-                free_memory(i_node);
+                free_memory(inode);
                 return -1;
             }
         }
@@ -907,16 +910,16 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
 
     free_memory(buf_read);
 
-    i_node->file_size+= bytes_to_add;
+    inode->file_size += bytes_to_add;
     time_t curr_time= time(NULL);
-    i_node->access_time = curr_time;
-    i_node->modification_time = curr_time;
-    i_node->status_change_time = curr_time;
-    if(!write_inode(inum, i_node)){
-        printf("FILE LAYER ERROR: updating inode %d for the file %s during the write operation\n",inum, path);
+    inode->access_time = curr_time;
+    inode->modification_time = curr_time;
+    inode->status_change_time = curr_time;
+    if(!write_inode(inum, inode)){
+        printf("Updating inode %d for the file %s during the write operation failed\n",inum, path);
         return -1;
     }
-    free_memory(i_node);
+    free_memory(inode);
     return nbytes;
 }
 
@@ -930,7 +933,8 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
         printf("Too long name for file\n");
         return false;
     }
-    unsigned short short_name_length = name_length;
+    unsigned short short_name_length = name_length; // TODO : Play using int
+    // 8 + 8 + 2 + name_len
     size_t new_entry_size = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + short_name_length;
     //if there is already a datablock for the dir file, we will add entry to it if it has space
     if(inode->num_blocks!=0){
@@ -942,13 +946,15 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
         int curr_pos = 0;
         while(curr_pos < BLOCK_SIZE){
             /*
-            addr_ptr for earlier records holds the len/size of record. However, for the last record it holds the BLOCKSIZE-(sum of prev record len)
+            INUM(8) | RECORD_LEN/ADDR_PTR(8 - either record len / space left) | FILE_STR_LEN | FILE_NAME
+            addr_ptr for earlier records holds the len/size of record.
+            However, for the last record it holds the BLOCKSIZE-(sum of all prev records len)
             this is fetched in next_entry. 
             For example, when the 1st entry is made to the block, the add_ptr holds the block size 4096
             when a 2nd entry is made, the add_ptr of the 1st entry holds rec_len while the add_ptr of 2nd entry hols 4096-(sum of prev record len)
             Hence, if BLOCK is able to accomodate more entries, it will be indicated in the add_ptr field of last entry.
             */      
-            int next_entry_offset_from_curr = ((int*)(dblock+curr_pos+INODE_SZ))[0];
+            int next_entry_offset_from_curr = ((int*)(dblock+curr_pos+INODE_SZ))[0]; // this gives record_len or space_left
             unsigned short curr_entry_name_length = ((unsigned short* )(dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0];//len of filename/iname pointed by curr_pos
             int curr_ptr_entry_length = INODE_SZ + ADDRESS_PTR_SZ + STRING_LENGTH_SZ + curr_entry_name_length;
             // the following condition holds true only for the last entry of the dir and if the block is able to accomodate new entry. Until the we move the curr_pos
@@ -956,9 +962,10 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
                 // updating curr entry addr with size of entry
                 ((int* )(dblock+curr_pos+INODE_SZ))[0] = curr_ptr_entry_length;
                 if(curr_ptr_entry_length<=0){
+                    // again just to be sure
                     return false;
                 }
-                int addr_ptr = next_entry_offset_from_curr - curr_ptr_entry_length; // this is essentially 4096-(sum of prev record len)
+                int addr_ptr = next_entry_offset_from_curr - curr_ptr_entry_length; // this is essentially 4096-(sum of all prev record len)
                 // This will even handle the padding.
                 curr_pos += curr_ptr_entry_length;
                 // add new entry
@@ -967,13 +974,16 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
                 ((unsigned short*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
                 strncpy((char*) (dblock+curr_pos+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), child_name, name_length);
                 if(!write_dblock(dblock_num, dblock)){
+                    printf("Writing new entry of dir to dblock failed\n");
                     return false;
                 }
                 return true;
             }
-            if(next_entry_offset_from_curr<=0){
+            if(next_entry_offset_from_curr<=0){ // this will never be true unless there is a bug
+                printf("Could be a bug, check this\n");
                 return false;
             }
+            // this will come here if diff is 0 or we can't accomodate in the current block
             curr_pos += next_entry_offset_from_curr;
         }
         free_memory(dblock);
@@ -990,6 +1000,7 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
     ((unsigned short*) (dblock+INODE_SZ+ADDRESS_PTR_SZ))[0] = short_name_length;
     strncpy((char*)(dblock+INODE_SZ+ADDRESS_PTR_SZ+STRING_LENGTH_SZ), child_name, name_length);
     if(!write_dblock(dblock_num, dblock)){
+        printf("Could be a bug, check this\n");
         return false;
     }
     add_dblock_to_inode(inode, dblock_num);
