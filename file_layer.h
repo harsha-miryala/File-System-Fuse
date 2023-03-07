@@ -10,16 +10,15 @@
 #define SINGLE_INDIRECT_BLOCK_COUNT (BLOCK_SIZE / ADDRESS_SIZE)
 #define DOUBLE_INDIRECT_BLOCK_COUNT (SINGLE_INDIRECT_NUM * BLOCK_SIZE / ADDRESS_SIZE)
 #define ADDRESS_PTR_SZ 8
-#define INODE_SZ 8 // TODO: recheck
+#define INODE_SZ 8
 #define MAX_NAME_LENGTH 255 // max len of a name
 #define ROOT_INODE 2
 #define STRING_LENGTH_SZ 2
 #define CACHE_SIZE 5000
 #define DEFAULT_PERMS (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 
-// TODO: name it more relevant
 // used when he details of a specific dir entry has to be retrieved.
-struct in_core_dir{
+struct file_pos_in_dir{
     char* dblock;
     size_t dblock_num;
     size_t fblock_num;
@@ -91,7 +90,7 @@ bool custom_mknod(const char* path, mode_t mode, dev_t dev);
 // TODO
 void fs_readdir();
 
-struct in_core_dir find_file(const char *const name, const struct iNode* const parent_inode);
+struct file_pos_in_dir find_file(const char *const name, const struct iNode* const parent_inode);
 
 int custom_truncate(const char* path, size_t offset);
 
@@ -104,8 +103,6 @@ int custom_open(const char* path, int oflag);
 ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset);
 
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset);
-
-/////////////////////
 
 /*
 Adds a new entry to a directory represented by the inode

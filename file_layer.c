@@ -127,14 +127,14 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
 }
 
 // TODO: VERIFY// Done
-struct in_core_dir find_file(const char* const name, const struct iNode* const parent_inode){
+struct file_pos_in_dir find_file(const char* const name, const struct iNode* const parent_inode){
     /*
     Each file entry in the directory is stored in the following format.
     INUM, RECORD_LEN/ADDR_PTR, FILE_STR_LEN, FILE_NAME
     INUM, RECORD_LEN/ADDR_PTR, FILE_STR_LEN sizes are predefined in file_layer.h
     as INODE_SZ, ADDRESS_PTR_SZ, STRING_LENGTH_SZ. Only the FILE_NAME size is variable based on len.
     */
-    struct in_core_dir file;
+    struct file_pos_in_dir file;
     /*
     This data structure is what is returned.
     It will hold the datablock containing the file_record, corresponding dBlock_num, fblock_num,
@@ -391,7 +391,7 @@ int get_inode_num_from_path(const char* const path){
         return -1;
     }
     // find the file
-    struct in_core_dir file = find_file(child_name, inode);
+    struct file_pos_in_dir file = find_file(child_name, inode);
     if(file.start_pos==-1){
         free_memory(inode);
         return -1;
@@ -471,7 +471,7 @@ bool is_empty_dir(struct iNode* inode){
         return false;
     }
     // should be the last entry if empty
-    struct in_core_dir parent_ref = find_file("..", inode);
+    struct file_pos_in_dir parent_ref = find_file("..", inode);
     if(parent_ref.start_pos==-1){
         return false;
     }
@@ -601,7 +601,7 @@ int custom_unlink(const char* path){
     }
 
     //find the location of the path file entry in the parent.
-    struct in_core_dir file = find_file(child_name, parent_inode);
+    struct file_pos_in_dir file = find_file(child_name, parent_inode);
     
     // Didnt find file in parent
     if(file.start_pos == -1){
