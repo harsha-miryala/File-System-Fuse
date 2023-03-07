@@ -33,7 +33,7 @@ static const struct fuse_operations fuse_ops;
 
 // TODO 
 // opendir
-// init
+// init - not reqd as init_file_layer launched
 
 static int inode_to_stdbuff(struct iNode* inode, struct stat* stdbuff);
 
