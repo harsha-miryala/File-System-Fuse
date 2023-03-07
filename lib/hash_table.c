@@ -1,7 +1,7 @@
-#include "hash_table.h"
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "../include/hash_table.h"
 
 int hash_find(hash_table* hash_map, const char* key) {
     unsigned long hash = nerds_hash(key);

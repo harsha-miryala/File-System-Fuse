@@ -1,4 +1,4 @@
-#include "fuse_layer.h"
+#include "../include/fuse_layer.h"
 
 static const struct fuse_operations fuse_ops = {
     .access   = charm_access,

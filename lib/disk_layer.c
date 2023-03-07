@@ -7,8 +7,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <fcntl.h>
-
-#include "disk_layer.h"
+#include "../include/disk_layer.h"
 
 // global vars
 #ifdef DISK

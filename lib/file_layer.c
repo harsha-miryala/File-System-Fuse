@@ -1,11 +1,10 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <string.h>
-
-#include "debug.h"
-#include "disk_layer.h"
-#include "file_layer.h"
-#include "hash_table.h"
+#include "../include/debug.h"
+#include "../include/disk_layer.h"
+#include "../include/file_layer.h"
+#include "../include/hash_table.h"
 
 static hash_table iName_cache;
 

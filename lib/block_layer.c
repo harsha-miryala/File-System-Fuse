@@ -2,10 +2,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "disk_layer.h"
-#include "block_layer.h"
-#include "debug.h"
+#include "../include/disk_layer.h"
+#include "../include/block_layer.h"
+#include "../include/debug.h"
 
 static struct superBlock* super_block = NULL;
 
