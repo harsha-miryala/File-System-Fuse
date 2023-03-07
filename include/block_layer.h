@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/stat.h>
-
+#include <stdbool.h>
 #include "disk_layer.h"
 
 #define ADDRESS_SIZE 8 // we need 8 bytes to tag a block number (can hold so many addresses upto 64 bits)
