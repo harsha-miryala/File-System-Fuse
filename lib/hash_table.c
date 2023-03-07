@@ -4,7 +4,7 @@
 #include "../include/hash_table.h"
 
 int hash_find(hash_table* hash_map, const char* key) {
-    unsigned long hash = nerds_hash(key);
+    unsigned long hash = get_hash(key);
     int hash_index = hash % hash_map->size;
     int value = hash_map->values[hash_index];
     if(value != 0 && strcmp(hash_map->keys[hash_index], key) == 0) {
@@ -24,7 +24,7 @@ void hash_insert(hash_table* hash_map, const char* key, int value) {
 }
 
 void hash_remove(hash_table* hash_map, const char* key) {
-    unsigned long hash = nerds_hash(key);
+    unsigned long hash = get_hash(key);
     int hash_index = hash % hash_map->size;
     hash_map->values[hash_index] = 0;
     free(hash_map->keys[hash_index]);
