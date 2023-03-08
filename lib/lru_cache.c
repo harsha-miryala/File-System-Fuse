@@ -1,26 +1,28 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
+#include "../include/lru_cache.h"
 
-// Define the node structure for doubly linked list
-typedef struct Node {
-    char* key;
-    int value;
-    struct Node* prev;
-    struct Node* next;
-} Node;
+// FNV-1a constants
+#define FNV_PRIME 0x1000193
+#define FNV_OFFSET 0x811C9DC5
 
-// Define the LRU Cache structure
-typedef struct LRUCache {
-    int capacity;
-    int size;
-    Node* head;
-    Node* tail;
-    Node** map; // Hash Map to store the keys and corresponding Node pointers
-} LRUCache;
+uint32_t fnv1a_hash(const char* str)
+{
+    uint32_t hash = FNV_OFFSET;
+    size_t len = strlen(str);
+
+    for (size_t i = 0; i < len; ++i)
+    {
+        hash ^= (uint32_t)str[i];
+        hash *= FNV_PRIME;
+    }
+
+    return hash;
+}
 
 // Initialize a new node with given key and value
-Node* newNode(char* key, int value) {
+Node* newNode(const char* key, int value) {
     Node* node = (Node*) malloc(sizeof(Node));
     node->key = strdup(key);
     node->value = value;
@@ -30,14 +32,13 @@ Node* newNode(char* key, int value) {
 }
 
 // Initialize the LRU Cache with given capacity
-LRUCache* LRUCacheCreate(int capacity) {
-    LRUCache* cache = (LRUCache*) malloc(sizeof(LRUCache));
+void LRUCacheCreate(LRUCache* cache, int capacity) {
+    cache = (LRUCache*) malloc(sizeof(LRUCache));
     cache->capacity = capacity;
     cache->size = 0;
     cache->head = NULL;
     cache->tail = NULL;
     cache->map = (Node**) calloc(capacity, sizeof(Node*)); // Initialize hash map with NULL pointers
-    return cache;
 }
 
 // Remove the given node from the doubly linked list
@@ -97,16 +98,31 @@ void LRUCacheFree(LRUCache* cache) {
 void removeLRUNode(LRUCache* cache) {
     Node* node = cache->tail;
     removeNode(cache, node);
-    cache->map[hash(node->key, cache->capacity)] = NULL;
+    cache->map[fnv1a_hash(node->key)%cache->capacity] = NULL;
     free(node->key);
     free(node);
     cache->size--;
 }
 
+bool LRUCacheRemove(LRUCache* cache, const char* key) {
+    int index = fnv1a_hash(key) % cache->capacity;
+    Node* node = cache->map[index];
+    while (node) {
+        if (strcmp(node->key, key) == 0) {
+            // Move the accessed node to the front of the list
+            removeNode(cache, node);
+            return true;
+        }
+        node = node->next;
+    }
+    // TODO: Potential key not found takes O(N)
+    return false;
+}
+
 // Get the value associated with the given key from the cache
 // Returns -1 if key not found in cache
-int LRUCacheGet(LRUCache* cache, char* key) {
-    int index = hash(key, cache->capacity);
+int LRUCacheGet(LRUCache* cache, const char* key) {
+    int index = fnv1a_hash(key) % cache->capacity;
     Node* node = cache->map[index];
     while (node) {
         if (strcmp(node->key, key) == 0) {
@@ -122,8 +138,8 @@ int LRUCacheGet(LRUCache* cache, char* key) {
 }
 
 // Put the given key-value pair in the cache
-void LRUCachePut(LRUCache* cache, char* key, int value) {
-    int index = hash(key, cache->capacity); // this uses djb2 hashing
+void LRUCachePut(LRUCache* cache, const char* key, int value) {
+    int index = fnv1a_hash(key) % cache->capacity;
     Node* node = cache->map[index];
     while (node) {
         if(strcmp(node->key, key) == 0){
@@ -145,4 +161,5 @@ void LRUCachePut(LRUCache* cache, char* key, int value) {
     if (cache->size > cache->capacity) {
         removeLRUNode(cache);
     }
+    return;
 }
