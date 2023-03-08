@@ -4,9 +4,9 @@
 #include "../include/debug.h"
 #include "../include/disk_layer.h"
 #include "../include/file_layer.h"
-#include "../include/hash_table.h"
+#include "../include/lru_cache.h"
 
-static hash_table iName_cache;
+static LRUCache iname_cache;
 
 // Returns char array index of the last slash of parent's path
 int get_parent_id(const char* const path, int path_len){
@@ -376,7 +376,7 @@ int get_inode_num_from_path(const char* const path){
         return ROOT_INODE;
     }
     // check if present in cache
-    int cached_inode_num = hash_find(&iName_cache, path);
+    int cached_inode_num = LRUCacheGet(&iname_cache, path);
     if(cached_inode_num>0){
         return cached_inode_num;
     }
@@ -405,7 +405,7 @@ int get_inode_num_from_path(const char* const path){
     int inode_num = ((int*) (file.dblock + file.start_pos))[0];
     free_memory(file.dblock);
     free_memory(inode);
-    hash_insert(&iName_cache, path, inode_num);
+    LRUCachePut(&iname_cache, path, inode_num);
     return inode_num;
 }
 
@@ -672,7 +672,7 @@ int custom_unlink(const char* path){
     inode->link_count--;
     if(inode->link_count==0){
         //if link_count is 0, the file has to be deleted.
-        hash_remove(&iName_cache, path);
+        LRUCacheRemove(&iname_cache, path);
         free_inode(inum);
     }
     else{
@@ -1067,7 +1067,7 @@ bool init_file_layer(){
     printf("root dir created\n");
     printf("No of dblocks for root:%d\n",root->num_blocks);
     free_memory(root);
-    init_hash_table(&iName_cache, CACHE_SIZE);
+    LRUCacheCreate(&iname_cache, CACHE_SIZE);
     DEBUG_PRINTF("File layer initialization done \n");
     return true;
 }
