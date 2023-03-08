@@ -242,7 +242,7 @@ void two_block_write_test()
         char block = i + 'a';
         char path[5] = {'/', block, '/', block, '\0'}; // create path
         char *buffer = "This is a test buffer to test the writing functionality of custom_write";
-        unsigned int nbytes = strlen(buffer);     // get buffer size
+        int nbytes = strlen(buffer);     // get buffer size
         int num_writes = BLOCK_SIZE / nbytes + 1; // calculate number of writes to write two blocks
         for (int j = 0; j < num_writes; j++)
         { // iterate for each write

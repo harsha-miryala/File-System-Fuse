@@ -718,28 +718,24 @@ int custom_close(int file_descriptor){
 //TO VERIFY
 ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
     memset(buff, 0, nbytes);
-
     // fetch inum from path
     int inum = get_inode_num_from_path(path);
     if (inum == -1) {
         printf("ERROR: Inode file %s not found\n", path);
         return -1;
     }
-
     struct iNode *inode= read_inode(inum);
-
     if (inode->file_size == 0) {
         return 0;
     }
-
     if (offset > inode->file_size) {
         printf("ERROR: Offset %zu for read is greater than size of the file %d\n", offset, inode->file_size);
         return -1;
     }
-
     //update nbytes when read_len from offset exceeds file_size. 
-    if (offset + nbytes > inode->file_size)
+    if (offset + nbytes > inode->file_size){
         nbytes = inode->file_size - offset;
+    }
 
     int start_block = offset / BLOCK_SIZE;
     int start_block_top_ceil = offset % BLOCK_SIZE;
@@ -747,7 +743,10 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
     int end_block = (offset + nbytes) / BLOCK_SIZE;
     int end_block_bottom_floor = BLOCK_SIZE - (offset + nbytes) % BLOCK_SIZE;
 
-    int nblocks_read = start_block - end_block + 1;
+    int nblocks_read = end_block - start_block + 1;
+
+    // printf("start_block %d, start_block_start %d, end_block %d, end_block_end %d, blocks_to_read %d\n",
+    //         start_block, start_block_top_ceil, end_block, BLOCK_SIZE-end_block_bottom_floor, nblocks_read);
 
     DEBUG_PRINTF("Total number of blocks to read: %i\n", nblocks_read);
 
@@ -819,7 +818,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
 //TO VERIFY 
 // on failure what to return?
 ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset){
-    int inum= get_inode_num_from_path(path);
+    int inum = get_inode_num_from_path(path);
     if (inum == -1) {
         printf("ERROR in FILE_LAYER: Unable to find Inode for file %s\n", path);
         return -1;
@@ -830,19 +829,19 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
 
     if(offset + nbytes > inode->file_size){
         //add new blocks; 
-        bytes_to_add=(offset + nbytes) - inode->file_size;
-        int new_block_count = (offset + nbytes) / BLOCK_SIZE - inode->num_blocks +1;
-        DEBUG_PRINTF("Total new blocks being added to the file is %d\n". new_block_count);
+        bytes_to_add = (offset + nbytes) - inode->file_size;
+        int new_blocks_to_be_added = ((offset + nbytes) / BLOCK_SIZE) - inode->num_blocks + 1;
+        // printf("Creating %d new blocks for writing %d bytes with %d offset to inode %d\n",
+        //        new_blocks_to_be_added, nbytes, offset, inum);
+        DEBUG_PRINTF("Total new blocks being added to the file is %d\n". new_blocks_to_be_added);
         int new_block_id;
-
-        for(int i=0; i<new_block_count; i++){
+        for(int i=0; i<new_blocks_to_be_added; i++){
             new_block_id = create_new_dblock();
             if(new_block_id<=0){
                 printf("Failed to allocated new Data_Block for the write operation for the file %s\n", path);
                 free_memory(inode);
                 return -1;
             }
-
             if(!add_dblock_to_inode(inode, new_block_id)){
                 printf("New Data Block addition to inode failed for file %s\n", path);
                 free_memory(inode);
@@ -851,7 +850,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
         }
     }
 
-    int start_block= offset / BLOCK_SIZE;
+    int start_block = offset / BLOCK_SIZE;
     int start_block_top_ceil = offset % BLOCK_SIZE;
 
     int end_block = (offset + nbytes) / BLOCK_SIZE;
@@ -859,13 +858,16 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
 
     int nblocks_write = end_block - start_block + 1;
 
+    // printf("start_block %d, start_block_start %d, end_block %d, end_block_end %d, blocks_to_write %d\n",
+    //         start_block, start_block_top_ceil, end_block, BLOCK_SIZE-end_block_bottom_floor, nblocks_write);
+
     DEBUG_PRINTF("writing %d blocks to file\n", nblocks_write);
 
     size_t bytes_written=0;
     char *buf_read = NULL;
 
     // if there is only 1 block to write
-    if(nblocks_write ==1){
+    if(nblocks_write==1){
         int dblock_num = fblock_num_to_dblock_num(inode, start_block);
         if(dblock_num<=0){
             printf("Error getting dblocknum from Fblock_num during %d block write for %s\n",start_block, path);
@@ -879,9 +881,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
             free_memory(inode);
             return -1;
         }
-        
         memcpy(buf_read+start_block_top_ceil, buff, nbytes);
-
         if(!write_dblock(dblock_num, buf_read)){
             printf("Error writing to dblock_num %d during %s write", dblock_num, path);
             free_memory(buf_read);
@@ -897,26 +897,27 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
                 free_memory(inode);
                 return -1;
             }
-
             buf_read=read_dblock(dblock_num);
             if(buf_read == NULL){
                 printf("Error reading dblock_num %d during the write of file %s\n",dblock_num, path);
                 free_memory(inode);
                 return -1;
             }
-
             // for the 1st block, start only after start_block_top_ceil
             if(i==0){
-                memcpy(buf_read + start_block_top_ceil, buff + bytes_written, BLOCK_SIZE - (start_block_top_ceil));
-                bytes_written+= BLOCK_SIZE-start_block_top_ceil;
+                memcpy(buf_read + start_block_top_ceil, buff, BLOCK_SIZE - (start_block_top_ceil));
+                // printf("Added - %s\n", buf_read+start_block_top_ceil);
+                bytes_written += BLOCK_SIZE-start_block_top_ceil;
             }
             else if(i==nblocks_write-1){
                 //last block to be written
-                memcpy(buf_read, buff + bytes_written, BLOCK_SIZE- end_block_bottom_floor);
+                memcpy(buf_read, buff + bytes_written, BLOCK_SIZE-end_block_bottom_floor);
+                // printf("Added - %s\n", buf_read);
                 bytes_written+= BLOCK_SIZE - end_block_bottom_floor;
             }
             else{
                 memcpy(buf_read, buff + bytes_written, BLOCK_SIZE);
+                // printf("Added - %s\n", buf_read);
                 bytes_written += BLOCK_SIZE;
             }
             if(!write_dblock(dblock_num, buf_read)){
@@ -925,11 +926,10 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
                 free_memory(inode);
                 return -1;
             }
+            // printf("Bytes written %d, Dblock %d, Fblock %d\n", bytes_written, dblock_num, start_block+i);
         }
     }
-
     free_memory(buf_read);
-
     inode->file_size += bytes_to_add;
     time_t curr_time= time(NULL);
     inode->access_time = curr_time;

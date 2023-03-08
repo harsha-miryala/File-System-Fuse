@@ -1,3 +1,6 @@
+#include <errno.h>
+#include <stdbool.h>
+#include <string.h>
 #include "../include/fuse_layer.h"
 
 static const struct fuse_operations fuse_ops = {
@@ -90,14 +93,14 @@ static int charm_chmod(const char* path, mode_t mode){
 }
 
 static int charm_create(const char* path, mode_t mode, struct fuse_file_info* file_info){
-    int status = 0;
+    bool status = 0;
     if(file_info->flags & O_CREAT){
         status = custom_mknod(path, S_IFREG|mode, -1);
     }
     else{
         status = custom_mknod(path, S_IFREG|0775, -1);
     }
-    if(status <= -1){
+    if(!status){
         printf("FUSE LAYER : File creation unsuccessful\n");
         return -1;
     }
@@ -144,8 +147,8 @@ static int charm_rmdir(const char* path){
 }
 
 static int charm_mkdir(const char* path, mode_t mode){
-    int status = custom_mkdir(path, mode);
-    if(status==-1){
+    bool status = custom_mkdir(path, mode);
+    if(!status){
         printf("FUSE LAYER : mkdir unsuccessful\n");
         return -1;
     }
@@ -153,8 +156,8 @@ static int charm_mkdir(const char* path, mode_t mode){
 }
 
 static int charm_mknod(const char* path, mode_t mode, dev_t dev){
-    int status = custom_mknod(path, mode, dev);
-    if(status==-1){
+    bool status = custom_mknod(path, mode, dev);
+    if(!status){
         printf("FUSE LAYER : mknod unsuccessful\n");
         return -1;
     }

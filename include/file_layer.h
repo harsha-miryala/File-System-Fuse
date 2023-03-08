@@ -87,9 +87,6 @@ Returns:
 */
 bool custom_mknod(const char* path, mode_t mode, dev_t dev);
 
-// TODO
-void fs_readdir();
-
 struct file_pos_in_dir find_file(const char *const name, const struct iNode* const parent_inode);
 
 int custom_truncate(const char* path, size_t offset);
