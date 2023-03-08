@@ -32,7 +32,7 @@ bool alloc_memory(){
 #else
     m_ptr = (char *) malloc(FS_SIZE);
     if(!m_ptr){
-        printf("Error allocating file system memory for disk");
+        printf("Error allocating file system memory for disk \n");
         return false;
     }
     memset(m_ptr, 0, FS_SIZE);
@@ -51,7 +51,7 @@ bool dealloc_memory(){
     }
 #else
     if(!m_ptr){
-        printf("No disk memory to deallocate");
+        printf("No disk memory to deallocate \n");
         return false;
     }
     free_memory(m_ptr);
@@ -65,7 +65,7 @@ bool read_block(int block_id, char *buffer){
         return false;
     }
     if(block_id<0 || block_id >= BLOCK_COUNT){
-        printf("Invalid read of block index - out of range");
+        printf("Invalid read of block index - out of range\n");
         return false;
     }
 #ifdef DISK
@@ -89,7 +89,7 @@ bool write_block(int block_id, char *buffer){
         return false;
     }
     if(block_id<0 || block_id >= BLOCK_COUNT){
-        printf("Invalid write for block index - out of range");
+        printf("Invalid write for block index - out of range\n");
         return false;
     }
 #ifdef DISK

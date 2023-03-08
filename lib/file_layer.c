@@ -420,7 +420,7 @@ int create_new_file(const char* const path, struct iNode** buff, mode_t mode){
         // file already exists
         return -EEXIST;
     }
-    struct iNode* parent_inode = read_inode(parent_inode);
+    struct iNode* parent_inode = read_inode(parent_inode_num);
     if(!S_ISDIR(parent_inode->mode)){
         // parent is not a directory
         free_memory(parent_inode);
@@ -712,7 +712,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
     }
 
     if (offset > inode->file_size) {
-        printf("ERROR: Offset %zu for read is greater than size of the file %d\n", offset, inode->file_size);
+        printf("ERROR: Offset %zu for read is greater than size of the file %ld\n", offset, inode->file_size);
         return -1;
     }
 
@@ -738,13 +738,13 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
         //only 1 block to be read;
         dblock_num=fblock_num_to_dblock_num(inode,start_block);
         if(dblock_num<=0){
-            printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block,inode->num_blocks);
+            printf("Error fetching dblock_num %ld from fblock_num during the read. Max Blocks:%ld \n",start_block,inode->num_blocks);
             return -1;
         }
 
         buf_read=read_dblock(dblock_num);
         if(buf_read==NULL){
-            printf("Error fetching dblock_num %d during the read operation for %d\n",dblock_num,path);
+            printf("Error fetching dblock_num %ld during the read operation for %s\n",dblock_num,path);
             return -1;
         }
         memcpy(buff, buf_read+start_block_top_ceil, nbytes);
@@ -755,7 +755,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
         for(size_t i=0; i<nblocks_read;i++){
             dblock_num=fblock_num_to_dblock_num(inode, start_block+i);
             if(dblock_num<=0){
-                printf("Error fetching dblock_num %d from fblock_num during the read. Max Blocks:%d \n",start_block+i,inode->num_blocks);
+                printf("Error fetching dblock_num %ld from fblock_num during the read. Max Blocks:%ld \n",start_block+i,inode->num_blocks);
                 free_memory(inode);
                 return -1;
             }
@@ -763,7 +763,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
             buf_read=read_dblock(dblock_num);
 
             if(buf_read == NULL){
-                printf("Error fetching dblock_num %d during the read operation for %d\n",dblock_num,path);
+                printf("Error fetching dblock_num %ld during the read operation for %s\n",dblock_num,path);
                 free_memory(inode);
                 return -1;
             }
@@ -847,7 +847,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
     if(nblocks_write ==1){
         int dblock_num = fblock_num_to_dblock_num(inode, start_block);
         if(dblock_num<=0){
-            printf("Error getting dblocknum from Fblock_num during %d block write for %s\n",start_block, path);
+            printf("Error getting dblocknum from Fblock_num during %ld block write for %s\n",start_block, path);
             free_memory(inode);
             return -1;
         }
@@ -872,7 +872,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
         for(size_t i=0; i<nblocks_write; i++){
             int dblock_num = fblock_num_to_dblock_num(inode, start_block+i);
             if(dblock_num<=0){
-                printf("Error in fetching the dblock_num from fblock_num %d for %s\n", start_block+i, path);
+                printf("Error in fetching the dblock_num from fblock_num %ld for %s\n", start_block+i, path);
                 free_memory(inode);
                 return -1;
             }
@@ -915,7 +915,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
     inode->modification_time = curr_time;
     inode->status_change_time = curr_time;
     if(!write_inode(inum, inode)){
-        printf("Updating inode %d for the file %s during the write operation failed\n",inum, path);
+        printf("Updating inode %ld for the file %s during the write operation failed\n",inum, path);
         return -1;
     }
     free_memory(inode);

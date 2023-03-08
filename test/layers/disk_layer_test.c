@@ -42,7 +42,7 @@ int main()
     printf("DISK_LAYER_TEST 3: read_block (zeroed out check) passed\n\n");
 
     // Write to an invalid block
-    if (!write_block(-1, block_buffer))
+    if (write_block(-1, block_buffer))
     {
         printf("DISK_LAYER_TEST 4: write_block (with invalid block-id) failed\n\n");
         return -1;

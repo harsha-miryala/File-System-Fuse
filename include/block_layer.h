@@ -15,22 +15,22 @@
 #define FREE_LIST_BLOCKS ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1) // number of freelist blocks needed to store the information of data blocks
 
 struct superBlock {
-    size_t inode_count; // total number of inodes we can have
-    size_t latest_inum; // latest inode that is free
-    size_t inodes_per_block; // how many inodes per block
-    size_t free_list_head; // block containing addresses of free dblocks, when 0 that means fs is full
+    int inode_count; // total number of inodes we can have
+    int latest_inum; // latest inode that is free
+    int inodes_per_block; // how many inodes per block
+    int free_list_head; // block containing addresses of free dblocks, when 0 that means fs is full
 };
 
 struct iNode {
-    size_t direct_blocks[DIRECT_B_COUNT]; // direct block numbers
-    size_t single_indirect; // single indirection -> this is a block number which contains the block numbers
-    size_t double_indirect;
-    size_t link_count; // how many links an inode has
-    size_t file_size; // size of file
-    size_t num_blocks; // number of blocks a file has
+    int direct_blocks[DIRECT_B_COUNT]; // direct block numbers
+    int single_indirect; // single indirection -> this is a block number which contains the block numbers
+    int double_indirect;
+    int link_count; // how many links an inode has
+    int file_size; // size of file
+    int num_blocks; // number of blocks a file has
     bool allocated; // boolean value to track allocation
-    size_t user_id;
-    size_t group_id;
+    int user_id;
+    int group_id;
     mode_t mode; // 664 etc - rwx rwx rwx (user, group, global) - 9 bits
     time_t access_time;
     time_t creation_time;

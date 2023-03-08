@@ -43,7 +43,7 @@ void init_hash_table(hash_table* hash_map, unsigned long size) {
 unsigned long get_hash(const char* str) {
     unsigned long hash = 5381;
     int curr_char;
-    while (curr_char = *str++)
+    while ((curr_char = *str++))
         hash = ((hash << 5) + hash) + curr_char; /* hash * 33 + c */
     return hash;
 }

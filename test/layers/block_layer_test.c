@@ -16,7 +16,7 @@ int check_superblock_init()
         return -1;
     }
     struct superBlock *sb = (struct superBlock *)buffer;
-    if (sb->inode_count != (INODE_B_COUNT) / sizeof(struct iNode) ||
+    if (sb->inode_count != (INODE_B_COUNT) * sb->inodes_per_block ||
         sb->latest_inum != 3 ||
         sb->inodes_per_block != (BLOCK_SIZE) / sizeof(struct iNode) ||
         sb->free_list_head != INODE_B_COUNT + 1)
@@ -113,7 +113,7 @@ int main()
     printf("\nBLOCK_LAYER_TEST 1 INFO: Filesystem creation test - Passed!\n\n");
     // Check superblock creation
     print_superblock();
-    if (init_superblock_check() < 0)
+    if (check_superblock_init() < 0)
     {
         printf("BLOCK_LAYER_TEST 2 ERROR: Error reading the superblock\n\n");
         return -1;
@@ -123,9 +123,11 @@ int main()
     char *buffer = (char *)malloc(BLOCK_SIZE);
     char *test_string = "A TEST MESSAGE TO TEST THE CORRECTNESS OF BLOCK LAYER";
     memcpy(buffer, test_string, strlen(test_string));
+    printf("Data blocks per block %d\n", DBLOCKS_PER_BLOCK);
     for (int i = 0; i < DBLOCKS_PER_BLOCK; i++)
     {
         int dblock_num = create_new_dblock();
+        printf("Dblock - %d allocated\n", dblock_num);
         if (dblock_num < 0)
         {
             printf("BLOCK_LAYER_TEST 3 ERROR: Error during new dblock creation\n\n");
@@ -187,18 +189,18 @@ int main()
     inode->single_indirect = create_new_dblock();
     printf("%d is the single indirect access block assigned\n", inode->single_indirect);
     // Initialize a buffer to hold block addresses
-    char buffer[BLOCK_SIZE];
-    memset(buffer, 0, BLOCK_SIZE);
+    char buff[BLOCK_SIZE];
+    memset(buff, 0, BLOCK_SIZE);
     size_t offset = 0;
     // Go over one block and add all addresses to the buffer
     for (int i = 0; i < DBLOCKS_PER_BLOCK / 2; i++)
     {
         int block_id = create_new_dblock();
-        memcpy(buffer + offset, &block_id, ADDRESS_SIZE);
+        memcpy(buff + offset, &block_id, ADDRESS_SIZE);
         offset += ADDRESS_SIZE;
     }
     // Write the dblock into memory
-    if (!write_dblock(inode->single_indirect, buffer))
+    if (!write_dblock(inode->single_indirect, buff))
     {
         printf("BLOCK_LAYER ERROR: Unable to write single indirect block info into block\n");
         return -1;
@@ -217,14 +219,15 @@ int main()
         return -1;
     }
     // Print the direct access block read-back for the inode
-    for (int i = 0; i < DIRECT_B_COUNT; i++)
+    for (int i = 0; i < DIRECT_B_COUNT; i++){
         printf("%d is the direct access block read-back\n", rd_inode->direct_blocks[i]);
+    }
     // Print the single indirect access block read-back for the inode
     printf("%d is the single indirect access block read-back\n", rd_inode->single_indirect);
     // Inform the user that the inode read-write check has passed
     printf("\n\nBLOCK_LAYER_TEST 6 INFO: Inode read-write check - Passed!\n\n");
     // Free the inode and check for errors
-    if (free_inode(inode_num) < 0)
+    if (!free_inode(inode_num))
     {
         printf("BLOCK_LAYER_TEST 7 ERROR: Error freeing the inode\n");
         return -1;

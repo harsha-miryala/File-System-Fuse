@@ -33,7 +33,7 @@ bool init_superblock(){
 bool init_inode_list(){
     // Indirect blocks will use Data blocks itself to store the addresses.
     struct iNode inode[sizeof(struct iNode)];
-    for(size_t i=0; i<DIRECT_B_COUNT; i++){
+    for(int i=0; i<DIRECT_B_COUNT; i++){
         inode->direct_blocks[i] = 0; // using 0 because 0 can only be used by superblock
     }
     inode->single_indirect = 0;
@@ -44,16 +44,16 @@ bool init_inode_list(){
     inode->allocated = false;
     char buff[BLOCK_SIZE];
     int dummy_value = 0;
-    for(size_t block_id=1; block_id<=INODE_B_COUNT; block_id++){
-        size_t offset = 0;
+    for(int block_id=1; block_id<=INODE_B_COUNT; block_id++){
+        int offset = 0;
         memset(buff, dummy_value, BLOCK_SIZE);
         // each i-node block will be initialized with stuct inode. 
-        for(size_t i=0; i<super_block->inodes_per_block; i++){
+        for(int i=0; i<super_block->inodes_per_block; i++){
             memcpy(buff+offset, inode, sizeof(struct iNode));
             offset += sizeof(struct iNode);
         }
         if(!write_block(block_id, buff)){    
-            printf("Could not create inode at block - %d", &block_id);
+            printf("Could not create inode at block - %d", block_id);
             return false;
         }
     }
@@ -62,16 +62,16 @@ bool init_inode_list(){
 
 bool init_freelist(){
     char buff[BLOCK_SIZE];
-    size_t block_id = super_block->free_list_head;
-    size_t dummy_value = 0;
+    int block_id = super_block->free_list_head;
+    int dummy_value = 0;
      // 0th index will store the address of the next free list block that holds the addresses. 
     // Eg: Block 100:
     // 101-612, Block[0]=613
-    for(size_t i=0; i<FREE_LIST_BLOCKS; i++){
-        size_t curr_block_id = block_id;
+    for(int i=0; i<FREE_LIST_BLOCKS; i++){
+        int curr_block_id = block_id;
         memset(buff, dummy_value, BLOCK_SIZE);
-        size_t offset = 0;
-        for(size_t j=1; j<=DBLOCKS_PER_BLOCK; j++){
+        int offset = 0;
+        for(int j=1; j<=DBLOCKS_PER_BLOCK; j++){
             offset += ADDRESS_SIZE;
             block_id++;
             if(block_id >= BLOCK_COUNT){
@@ -108,12 +108,13 @@ int create_new_dblock(){
     if(!read_block(super_block->free_list_head, buff)){
         return -1;
     }
-    size_t dblock_num;
-    size_t *dblock_num_ptr = (size_t *)buff;
-    size_t ans = 0;
+    int *dblock_num_ptr = (int *)buff;
+    int ans = 0;
     //DBLOCKS_PER_BLOCK gives the number of block addresses a block can hold.
     // iterating from 1st index because 0th index is used to point to the next free node.
-    for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
+    for(int i=1; i<DBLOCKS_PER_BLOCK; i++){
+        int dblock_num = dblock_num_ptr[i];
+        // printf("%d", dblock_num);
         if(dblock_num_ptr[i]!=0){
             // the dblock is free and we are allotting this
             dblock_num_ptr[i]=0;
@@ -121,7 +122,7 @@ int create_new_dblock(){
             break;
         }
     }
-    size_t temp = super_block->free_list_head;
+    int temp = super_block->free_list_head;
     if(ans == 0){
         //freeList node itself is allocated as DataBlock
         ans = super_block->free_list_head;
@@ -186,9 +187,9 @@ bool free_dblock(int dblock_num){
     if(!read_block(super_block->free_list_head, buff)){
         return false;
     }
-    size_t* dblock_num_ptr = (size_t*) buff;
+    int* dblock_num_ptr = (int*) buff;
     int ans = 0;
-    for(size_t i=1; i<DBLOCKS_PER_BLOCK; i++){
+    for(int i=1; i<DBLOCKS_PER_BLOCK; i++){
         // if the free list head have one of the entry as 0, then that place can be updated with the block address of newly released block
         if(dblock_num_ptr[i]==0){
             dblock_num_ptr[i] = dblock_num;
@@ -200,7 +201,7 @@ bool free_dblock(int dblock_num){
     // the newly released dblock becomes the head of free list.
     if(ans==0){
         // dblock will be made the new free list which points to old one
-        size_t temp = super_block->free_list_head;
+        int temp = super_block->free_list_head;
         super_block->free_list_head = dblock_num;
         printf("Dblock %d is named as the free list head\n", dblock_num);
         if(!write_superblock()){
@@ -222,17 +223,17 @@ bool free_dblock(int dblock_num){
 }
 
 //helper functions
-bool is_valid_inum(size_t inode_num){
+bool is_valid_inum(int inode_num){
     return inode_num>0 && inode_num<super_block->inode_count;
 }
 
 //which block contains the corresponding inode_num
-size_t inode_num_to_block_id(int inode_num){
+int inode_num_to_block_id(int inode_num){
     return 1 + (inode_num/super_block->inodes_per_block);
 }
 
 // offset with the blockId that points to the struct of inode_num
-size_t inode_num_to_offset(int inode_num){
+int inode_num_to_offset(int inode_num){
     return inode_num % super_block->inodes_per_block;
 }
 
@@ -243,12 +244,12 @@ int create_new_inode(){
         return false;
     }
     // latest-inum is the next inum value from the prev allocated inum. Being used to improve the search.
-    size_t block_id = inode_num_to_block_id(super_block->latest_inum);
-    size_t offset = inode_num_to_offset(super_block->latest_inum);
+    int block_id = inode_num_to_block_id(super_block->latest_inum);
+    int offset = inode_num_to_offset(super_block->latest_inum);
     char buff[BLOCK_SIZE];
     struct iNode* temp = NULL;
     struct iNode* inode = NULL;
-    size_t visit_count = 0;
+    int visit_count = 0;
     while(visit_count != super_block->inode_count){
         // reading block
         if(read_block(block_id, buff)){
@@ -260,7 +261,7 @@ int create_new_inode(){
             visit_count++;
             if(inode->allocated==false){
                 //allocating the corresponding inode.
-                size_t ans = super_block->latest_inum;
+                int ans = super_block->latest_inum;
                 // getting the new latest inum from block_id and offset
                 super_block->latest_inum += ((block_id-1)*super_block->inodes_per_block)+offset;
                 inode->allocated = true;
@@ -281,9 +282,9 @@ struct iNode* read_inode(int inode_num){
         return false;
     }
     //get BlockId which contains the inode.
-    size_t block_id = inode_num_to_block_id(inode_num);
+    int block_id = inode_num_to_block_id(inode_num);
     // get offset within the blockId to point to exact inode struct
-    size_t offset = inode_num_to_offset(inode_num);
+    int offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
@@ -302,9 +303,9 @@ bool write_inode(int inode_num, struct iNode* inode){
         return false;
     }
     //get BlockId which contains the inode.
-    size_t block_id = inode_num_to_block_id(inode_num);
+    int block_id = inode_num_to_block_id(inode_num);
     // get offset within the blockId to point to exact inode struct
-    size_t offset = inode_num_to_offset(inode_num);
+    int offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
@@ -324,10 +325,10 @@ bool free_dblocks_from_inode(struct iNode* inode){
     bool done = false;
     char dblock_list_buff[BLOCK_SIZE];
     char single_indirect_block_buff[BLOCK_SIZE];
-    size_t* dblock_list_ptr;
-    size_t* single_indirect_block_ptr;
+    int* dblock_list_ptr;
+    int* single_indirect_block_ptr;
     // freeing direct block
-    for(size_t i=0; i<DIRECT_B_COUNT; i++){
+    for(int i=0; i<DIRECT_B_COUNT; i++){
         if(inode->direct_blocks[i]==0){
             done = true;
             break;
@@ -343,9 +344,9 @@ bool free_dblocks_from_inode(struct iNode* inode){
     if(!read_block(inode->single_indirect, dblock_list_buff)){
         return false;
     }
-    // store dblock number each by size_t
-    dblock_list_ptr = (size_t* )dblock_list_buff;
-    for(size_t i=0; i<DBLOCKS_PER_BLOCK; i++){
+    // store dblock number each by int
+    dblock_list_ptr = (int* )dblock_list_buff;
+    for(int i=0; i<DBLOCKS_PER_BLOCK; i++){
         if(dblock_list_ptr[i]==0){
             done = true;
             break;
@@ -365,8 +366,8 @@ bool free_dblocks_from_inode(struct iNode* inode){
     if(!read_block(inode->double_indirect, single_indirect_block_buff)){
         return false;
     }
-    single_indirect_block_ptr = (size_t* )single_indirect_block_buff;
-    for(size_t i=0; i<DBLOCKS_PER_BLOCK; i++){
+    single_indirect_block_ptr = (int* )single_indirect_block_buff;
+    for(int i=0; i<DBLOCKS_PER_BLOCK; i++){
         if(single_indirect_block_ptr[i]==0){
             done = true;
             break;
@@ -375,8 +376,8 @@ bool free_dblocks_from_inode(struct iNode* inode){
         if(!read_block(single_indirect_block_ptr[i], dblock_list_buff)){
             return false;
         }
-        dblock_list_ptr = (size_t* )dblock_list_buff;
-        for(size_t j=0; j<DBLOCKS_PER_BLOCK; j++){
+        dblock_list_ptr = (int* )dblock_list_buff;
+        for(int j=0; j<DBLOCKS_PER_BLOCK; j++){
             if(dblock_list_ptr[j]==0){
                 done = true;
                 break;
@@ -400,8 +401,8 @@ bool free_inode(int inode_num){
         printf("Invalid inode num being accessed or out of range");
         return false;
     }
-    size_t block_id = inode_num_to_block_id(inode_num);
-    size_t offset = inode_num_to_offset(inode_num);
+    int block_id = inode_num_to_block_id(inode_num);
+    int offset = inode_num_to_offset(inode_num);
     char buff[BLOCK_SIZE];
     if(!read_block(block_id, buff)){
         return false;
@@ -423,25 +424,25 @@ bool free_inode(int inode_num){
 
 bool make_fs(){
     // this calls disk layer
-    if(allocate_memory()){
+    if(!alloc_memory()){
         printf("Memory allocation for block failed \n");
         return false;
     }
     DEBUG_PRINTF("Memory Allocated for block \n");
 
-    if(init_superblock()){
+    if(!init_superblock()){
         printf("Superblock allocation failed \n");
         return false;
     }
     DEBUG_PRINTF("Superblock created \n");
 
-    if(init_inode_list()){
+    if(!init_inode_list()){
         printf("Inode List allocation failed \n");
         return false;
     }
     DEBUG_PRINTF("Inode List created \n");
 
-    if(init_freelist()){
+    if(!init_freelist()){
         printf("Free List allocation failed \n");
         return false;
     }
