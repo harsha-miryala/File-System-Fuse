@@ -3,27 +3,28 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-// Define the node structure for doubly linked list
-typedef struct Node {
+struct node {
     char* key;
     int value;
-    struct Node* prev;
-    struct Node* next;
-} Node;
+    struct node* prev;
+    struct node* next;
+};
 
-// Define the LRU Cache structure
-typedef struct LRUCache {
-    int capacity;
+struct lru_cache {
+    struct node* head;
+    struct node* tail;
     int size;
-    Node* head;
-    Node* tail;
-    Node** map; // Hash Map to store the keys and corresponding Node pointers
-} LRUCache;
+    int capacity;
+    struct node** map;
+};
 
-void LRUCacheCreate(LRUCache* cache, int capacity);
+// struct lru_cache* create_cache(int capacity);
+void create_cache(struct lru_cache* cache, int capacity);
 
-bool LRUCacheRemove(LRUCache* cache, const char* key);
+bool pop_cache(struct lru_cache* cache, const char* key);
 
-int LRUCacheGet(LRUCache* cache, const char* key);
+void set_cache(struct lru_cache* cache, const char* key, int value);
 
-void LRUCachePut(LRUCache* cache, const char* key, int value);
+int get_cache(struct lru_cache* cache, const char* key);
+
+void free_cache(struct lru_cache* cache);

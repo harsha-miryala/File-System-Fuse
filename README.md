@@ -24,6 +24,11 @@
 
 ### Unit Tests
 
+#### LRU Cache layer
+
+##### gcc -Wall test/layers/lru_cache_test.c lib/lru_cache.c -o obj/lru_cache
+##### ./obj/lru_cache_test
+
 #### Disk layer
 
 ##### gcc -Wall test/layers/disk_layer_test.c lib/disk_layer.c -o obj/disk_test
@@ -36,5 +41,5 @@
 
 #### File layer
 
-##### gcc -Wall test/layers/file_layer_test.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/hash_table.c -o obj/file_test
+##### gcc -Wall test/layers/file_layer_test.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/lru_cache.c -o obj/file_test
 ##### ./obj/file_test

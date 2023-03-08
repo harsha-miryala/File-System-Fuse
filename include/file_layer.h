@@ -9,12 +9,12 @@
 
 #define SINGLE_INDIRECT_BLOCK_COUNT (BLOCK_SIZE / ADDRESS_SIZE)
 #define DOUBLE_INDIRECT_BLOCK_COUNT (SINGLE_INDIRECT_NUM * BLOCK_SIZE / ADDRESS_SIZE)
-#define ADDRESS_PTR_SZ 8
-#define INODE_SZ 8
+#define ADDRESS_PTR_SZ 4
+#define INODE_SZ 4
 #define MAX_NAME_LENGTH 255 // max len of a name
 #define ROOT_INODE 2
 #define STRING_LENGTH_SZ 2
-#define CACHE_SIZE 5000
+#define CACHE_SIZE 50000
 #define DEFAULT_PERMS (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 
 // used when he details of a specific dir entry has to be retrieved.

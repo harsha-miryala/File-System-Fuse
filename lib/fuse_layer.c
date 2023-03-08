@@ -1,6 +1,5 @@
 #include <errno.h>
 #include <stdbool.h>
-#include <string.h>
 #include "../include/fuse_layer.h"
 
 static const struct fuse_operations fuse_ops = {
@@ -143,16 +142,16 @@ static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
         int next_entry_loc = 0;
         while(offset<BLOCK_SIZE){
             // reading inode
-            int file_inode_num;
+            unsigned int file_inode_num;
             memcpy(&file_inode_num, dblock+offset, INODE_SZ);
             offset += INODE_SZ;
             // space left or length to move
-            int entry_size; // could be either size left or how much to move
+            unsigned int entry_size; // could be either size left or how much to move
             memcpy(&entry_size, dblock+offset, ADDRESS_PTR_SZ);
             next_entry_loc += entry_size;
             offset += ADDRESS_PTR_SZ;
             // file size
-            int file_name_size;
+            unsigned short file_name_size;
             memcpy(&file_name_size, dblock+offset, STRING_LENGTH_SZ);
             offset += STRING_LENGTH_SZ;
             // file name
@@ -161,7 +160,7 @@ static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
             memcpy(file_name, dblock+offset, file_name_size);
             offset += file_name_size;
             // pull inode and send through filler
-            struct iNode* file_inode = read_inode(file_inode);
+            struct iNode* file_inode = read_inode(file_inode_num);
             struct stat stdbuff_data;
             memset(&stdbuff_data, 0, sizeof(struct stat));
             struct stat *stdbuff = &stdbuff_data;

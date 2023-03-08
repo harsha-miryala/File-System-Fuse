@@ -2,7 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "../include/lru_cache.h"
+
+struct node {
+    char* key;
+    int value;
+    struct node* prev;
+    struct node* next;
+};
+
+struct lru_cache {
+    struct node* head;
+    struct node* tail;
+    int size;
+    int capacity;
+    struct node** map;
+};
 
 unsigned long djb2_hash(const char *str)
 {
@@ -13,25 +27,14 @@ unsigned long djb2_hash(const char *str)
     return hash;
 }
 
-// struct lru_cache* create_cache(int capacity) {
-//     struct lru_cache* cache = (struct lru_cache*) malloc(sizeof(struct lru_cache));
-//     cache->head = NULL;
-//     cache->tail = NULL;
-//     cache->size = 0;
-//     cache->capacity = capacity;
-//     cache->map = (struct node**) calloc(capacity, sizeof(struct node**));
-//     return cache;
-// }
-
-void create_cache(struct lru_cache* cache, int capacity) {
-    if(cache == NULL){
-        cache = (struct lru_cache*) malloc(sizeof(struct lru_cache));
-    }
+struct lru_cache* create_cache(int capacity) {
+    struct lru_cache* cache = (struct lru_cache*) malloc(sizeof(struct lru_cache));
     cache->head = NULL;
     cache->tail = NULL;
     cache->size = 0;
     cache->capacity = capacity;
     cache->map = (struct node**) calloc(capacity, sizeof(struct node**));
+    return cache;
 }
 
 // Free the given node and its key
@@ -50,7 +53,6 @@ void free_list(struct node* node) {
 }
 
 // Free the LRU Cache and its hash map
-// Note: Shouldn't use on top of static
 void free_cache(struct lru_cache* cache) {
     free_list(cache->head);
     free(cache->map);
