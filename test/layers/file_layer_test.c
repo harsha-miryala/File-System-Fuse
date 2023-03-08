@@ -47,7 +47,7 @@ void mkdir_test()
     free_memory(root_inode); // free memory
 }
 
-void mk_numerous_files_test()
+void mk_multiple_files_test()
 {
     printf("Creating multiple files in a directory...\n");
     // Directory name
@@ -91,7 +91,7 @@ void unlink_multiple_files_test()
         // format the file path with the current index
         snprintf(filePath, 15, "/test/%d.txt", i);
         // attempt to unlink the file at the path
-        if (custom_unlink(filePath) < 0)
+        if(custom_unlink(filePath)!=0)
         {
             // if unlink fails, print an error message and exit
             printf("FAILED ON FILE: %s\n", filePath);
@@ -523,6 +523,7 @@ void unlink_root_test()
     printf("Running UNLINK ROOT test...\n");
     // Call custom_unlink() function to attempt to unlink the root directory ("/").
     int result = custom_unlink("/");
+    printf("result:%d\n",result);
     // Check the return value of custom_unlink() and print appropriate message.
     if (result != -EINVAL)
     {
@@ -556,7 +557,7 @@ int main()
     // Test to make file
     mk_file_test();
     printf("------------------------------------------------------------------------\n");
-    mk_numerous_files_test();
+    mk_multiple_files_test();
     printf("------------------------------------------------------------------------\n");
     unlink_multiple_files_test();
     printf("------------------------------------------------------------------------\n");

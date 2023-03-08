@@ -50,8 +50,8 @@ bool get_child_name(char* const buff, const char* const path, int path_len){
 // get dblock num corr to file block number
 int fblock_num_to_dblock_num(const struct iNode* const inode, int fblock_num){
     int dblock_num = -1;
-    if((int)fblock_num > inode->num_blocks){
-        printf("invalid file block num");
+    if(fblock_num > inode->num_blocks){
+        printf("invalid file block num - %d with block count as %d\n", fblock_num, inode->num_blocks);
         return dblock_num;
     }
     // if its part of direct block
@@ -144,6 +144,8 @@ struct file_pos_in_dir find_file(const char* const name, const struct iNode* con
     // file.prev_entry holds the starting point of the preceding entry the file entry in question.
     file.prev_entry = -1;
     //if not a directory, return
+    // printf("Inside find_file(), checking is this a dir\n");
+    // printf("%d\n",S_ISDIR(parent_inode->mode));
     if(!S_ISDIR(parent_inode->mode)){
         file.start_pos = -1;
         return file;
@@ -151,6 +153,7 @@ struct file_pos_in_dir find_file(const char* const name, const struct iNode* con
     // TODO : Check if name is in bounds, else return garbage
     int name_length = strlen(name);
     // traverse through the datablocks in parent directory to find the entry for the file.
+    // printf("parent_inode->num_blocks:%d\n",parent_inode->num_blocks);
     for(int i=0; i<parent_inode->num_blocks; i++){
         file.dblock_num = fblock_num_to_dblock_num(parent_inode, i);
         file.fblock_num = i;
@@ -158,6 +161,7 @@ struct file_pos_in_dir find_file(const char* const name, const struct iNode* con
         // However, it will be initialied to -1 in the beginning for each block.
         if(file.dblock_num<=0){
             file.start_pos = -1;
+            printf("file.dblock_num<=0\n");
             return file;
         }
         file.dblock = read_dblock(file.dblock_num);
@@ -179,6 +183,7 @@ struct file_pos_in_dir find_file(const char* const name, const struct iNode* con
             int next_entry_offset = ((int*) (file.dblock+curr_pos+INODE_SZ))[0]; //rec_len corresponding to curr_pos
             if(next_entry_offset<=0){
                 file.start_pos = -1;
+                printf("next_entry_offset: %d\n",next_entry_offset);
                 return file;
             }
             file.prev_entry = curr_pos; //prev will now point to curr and curr will point to the next record in the block.
@@ -186,6 +191,7 @@ struct file_pos_in_dir find_file(const char* const name, const struct iNode* con
         }
     }
     //record not found
+    // printf("record not found\n");
     file.start_pos = -1; // -1 is set to start_pos when the record is not found.
     file.prev_entry = -1;
     return file;
@@ -246,6 +252,7 @@ bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
         free_memory(double_indirect_buff);
         free_memory(single_indirect_buff);
     }
+    inode->num_blocks++;
     return true;
 }
 
@@ -406,18 +413,20 @@ int create_new_file(const char* const path, struct iNode** buff, mode_t mode){
     // getting parent path
     int path_len = strlen(path);
     char parent_path[path_len+1];
-    if(get_parent_path(parent_path, path, path_len)){
+    if(!get_parent_path(parent_path, path, path_len)){
         // no parent path
+        printf("No parent path exists\n");
         return -ENOENT;
     }
     int parent_inode_num = get_inode_num_from_path(parent_path);
     if(parent_inode_num==-1){
-        // parent path doesnt exist
+        printf("Invalid parent path : %s\n", parent_path);
         return -ENOENT;
     }
     int child_inode_num = get_inode_num_from_path(path);
     if(child_inode_num!=-1){
         // file already exists
+        printf("File already exists\n");
         return -EEXIST;
     }
     struct iNode* parent_inode = read_inode(parent_inode_num);
@@ -466,21 +475,26 @@ int create_new_file(const char* const path, struct iNode** buff, mode_t mode){
 }
 
 bool is_empty_dir(struct iNode* inode){
+    printf("checking if dir is empty\n");
     if(inode->num_blocks>1){
+        printf("No of dblocks %d\n", inode->num_blocks);
         return false;
     }
     // should be the last entry if empty
     struct file_pos_in_dir parent_ref = find_file("..", inode);
     if(parent_ref.start_pos==-1){
+        printf("Did not find the location of .. for the dir to check if its empty\n");
         return false;
     }
     int next_entry = ((int*)(parent_ref.dblock+parent_ref.start_pos+INODE_SZ))[0];
+    printf("IsEmpty: %d\n", parent_ref.start_pos+next_entry == BLOCK_SIZE );
     return parent_ref.start_pos+next_entry == BLOCK_SIZE;
 }
 
 bool custom_mkdir(const char* path, mode_t mode){
     struct iNode* child_inode = NULL;
     int child_inode_num = create_new_file(path, &child_inode, S_IFDIR|mode);
+    printf("Inode Num : %d assigned for the new dir : %s\n", child_inode_num, path);
     if(child_inode_num<=-1){
         free_memory(child_inode);
         return false;
@@ -564,15 +578,16 @@ int custom_unlink(const char* path){
     int path_len = strlen(path);
 
     int inum = get_inode_num_from_path(path);
-
+    // printf("Inside custom_unlink()! inum val is %d \n", inum);
     if(inum==-1){
         DEBUG_PRINTF("FILE LAYER UNLINK ERROR: Inode for %s not found\n", path);
         return -EEXIST;
     }
     struct iNode *inode= read_inode(inum);
-    // if the path is a file and it is not empty.
+    // if the path is a dir and it is not empty.
     if(S_ISDIR(inode->mode) && !is_empty_dir(inode)){
         DEBUG_PRINTF("FILE LAYER ERROR: Unlink failed as the dir %s is not empty\n", path);
+        printf("Dir %s is not empty\n",path);
         free_memory(inode);
         return -ENOTEMPTY;
     }
@@ -582,6 +597,7 @@ int custom_unlink(const char* path){
     //should copy the parent path to buffer parent_path
     if(!get_parent_path(parent_path, path, path_len)){
         DEBUG_PRINTF("FILE LAYER ERROR: Failed to unlink %s\n",path);
+        printf("couldn't fetch parent path during unlink\n");
         free_memory(inode);
         return -EINVAL;
     }
@@ -589,6 +605,7 @@ int custom_unlink(const char* path){
     int parent_inode_num = get_inode_num_from_path(parent_path);
 
     if(parent_inode_num == -1){
+        printf("parent inum -1\n");
         return -1;
     }
 
@@ -601,7 +618,10 @@ int custom_unlink(const char* path){
 
     //find the location of the path file entry in the parent.
     struct file_pos_in_dir file = find_file(child_name, parent_inode);
-    
+
+    DEBUG_PRINTF("Path : %s, Parent Inode: %d, Pos in Dir: %d, DBlock: %d, Block Count: %d\n",
+           path, parent_inode_num, file.start_pos, file.dblock_num, parent_inode->num_blocks);
+
     // Didnt find file in parent
     if(file.start_pos == -1){
         return -1;
@@ -614,9 +634,10 @@ int custom_unlink(const char* path){
         // so we dont traverse that record in the future.
         // this means F1, F2, F3 and now we delete F3 and free it up or delete F2 and then point from F1 to F3
         ((int *)(file.dblock + file.prev_entry + INODE_SZ))[0]+= next_entry_offset_from_curr;
+        write_dblock(file.dblock_num, file.dblock);
     }  
     else if(file.start_pos == 0 && next_entry_offset_from_curr != BLOCK_SIZE){
-        //this is the first entry in the directory and it is followed by other entries
+        // this is the first entry in the directory and it is followed by other entries
         // Move next entry to the start of block
         // F1, F2, F3 and if you delete F1, F2 will be moved to F1 while also updating offset
         unsigned short next_entry_name_len = ((unsigned short *)(file.dblock + next_entry_offset_from_curr + INODE_SZ + ADDRESS_PTR_SZ))[0];//next entry namestr len
@@ -628,7 +649,7 @@ int custom_unlink(const char* path){
     else if(file.start_pos==0){
         //Remove Datablock
         int end_dblock_num = fblock_num_to_dblock_num(parent_inode, parent_inode->num_blocks-1);
-        int curr_dblock_num = fblock_num_to_dblock_num(parent_inode, file.dblock_num);
+        int curr_dblock_num = fblock_num_to_dblock_num(parent_inode, file.fblock_num);
         if(curr_dblock_num <=0){
             return -1;
         }
@@ -640,7 +661,6 @@ int custom_unlink(const char* path){
         write_dblock_to_inode(parent_inode, file.fblock_num, end_dblock_num);
         parent_inode->num_blocks--;
     }
-    hash_remove(&iName_cache, path);
     free_memory(file.dblock);
 
     time_t curr_time = time(NULL);
@@ -652,6 +672,7 @@ int custom_unlink(const char* path){
     inode->link_count--;
     if(inode->link_count==0){
         //if link_count is 0, the file has to be deleted.
+        hash_remove(&iName_cache, path);
         free_inode(inum);
     }
     else{
@@ -1002,7 +1023,12 @@ bool add_new_entry(struct iNode* inode, int child_inode_num, char* child_name){
         printf("Could be a bug, check this\n");
         return false;
     }
-    add_dblock_to_inode(inode, dblock_num);
+    //this part is modified. TODO: verify
+    if(!add_dblock_to_inode(inode, dblock_num)){
+        printf("couldn't add dblock to inode\n");
+        return false;
+    }
+    
     inode->file_size += BLOCK_SIZE;
     return true;
 }
@@ -1038,6 +1064,8 @@ bool init_file_layer(){
     if(!write_inode(ROOT_INODE, root)){
         return false;
     }
+    printf("root dir created\n");
+    printf("No of dblocks for root:%d\n",root->num_blocks);
     free_memory(root);
     init_hash_table(&iName_cache, CACHE_SIZE);
     DEBUG_PRINTF("File layer initialization done \n");

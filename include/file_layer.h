@@ -20,10 +20,10 @@
 // used when he details of a specific dir entry has to be retrieved.
 struct file_pos_in_dir{
     char* dblock;
-    size_t dblock_num;
-    size_t fblock_num;
-    size_t start_pos;//contains the pointer to the inum in the dir entry
-    size_t prev_entry;// usually contains the record len of the previous entry. If the entry is the 1st entry, it stores -1
+    int dblock_num;
+    int fblock_num;
+    int start_pos;//contains the pointer to the inum in the dir entry
+    int prev_entry;// usually contains the record len of the previous entry. If the entry is the 1st entry, it stores -1
 };
 
 // fblock is essentially position of the datablock relative to that file
