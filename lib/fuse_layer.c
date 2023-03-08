@@ -80,7 +80,7 @@ static int charm_chmod(const char* path, mode_t mode){
         return -1;
     }
     return 0;
-}
+} 
 
 static int charm_create(const char* path, mode_t mode, struct fuse_file_info* file_info){
     bool status = false;
