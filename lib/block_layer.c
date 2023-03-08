@@ -69,9 +69,10 @@ bool init_freelist(){
     // 101-612, Block[0]=613
     for(int i=0; i<FREE_LIST_BLOCKS; i++){
         int curr_block_id = block_id;
+        // printf("Started with %d and ", curr_block_id);
         memset(buff, dummy_value, BLOCK_SIZE);
         int offset = 0;
-        for(int j=1; j<=DBLOCKS_PER_BLOCK; j++){
+        for(int j=1; j<DBLOCKS_PER_BLOCK; j++){
             offset += ADDRESS_SIZE;
             block_id++;
             if(block_id >= BLOCK_COUNT){
@@ -87,6 +88,7 @@ bool init_freelist(){
         } else{
             memcpy(buff, &block_id, ADDRESS_SIZE);
         }
+        // printf("ended with %d\n", block_id);
         if(!write_block(curr_block_id, buff)){
             printf("Unable to write in the free list");
             return false;
@@ -114,8 +116,8 @@ int create_new_dblock(){
     // iterating from 1st index because 0th index is used to point to the next free node.
     for(int i=1; i<DBLOCKS_PER_BLOCK; i++){
         int dblock_num = dblock_num_ptr[i];
-        // printf("%d", dblock_num);
         if(dblock_num_ptr[i]!=0){
+            // printf("pos - %d : %d\n", i, dblock_num);
             // the dblock is free and we are allotting this
             dblock_num_ptr[i]=0;
             ans = dblock_num;
@@ -240,8 +242,8 @@ int inode_num_to_offset(int inode_num){
 int create_new_inode(){
     // TODO: Worst case - O(N) for finding one even with use of latest inum
     if(!is_valid_inum(super_block->latest_inum)){
-        printf("Invalid inode num being accessed or out of range");
-        return false;
+        printf("Invalid inode num - %d being accessed or out of range during create_new_inode\n", super_block->latest_inum);
+        return -1;
     }
     // latest-inum is the next inum value from the prev allocated inum. Being used to improve the search.
     int block_id = inode_num_to_block_id(super_block->latest_inum);
@@ -252,7 +254,7 @@ int create_new_inode(){
     int visit_count = 0;
     while(visit_count != super_block->inode_count){
         // reading block
-        if(read_block(block_id, buff)){
+        if(!read_block(block_id, buff)){
             return false;
         }
         temp = (struct iNode* ) buff;
@@ -263,9 +265,10 @@ int create_new_inode(){
                 //allocating the corresponding inode.
                 int ans = super_block->latest_inum;
                 // getting the new latest inum from block_id and offset
-                super_block->latest_inum += ((block_id-1)*super_block->inodes_per_block)+offset;
+                super_block->latest_inum += visit_count;
                 inode->allocated = true;
                 DEBUG_PRINTF("Inum %03d Block %03d Offset %03d allocated\n", ans, block_id, offset);
+                // printf("Inum %03d Block %03d Offset %03d allocated\n", ans, block_id, offset);
                 return ans;
             }
         }
@@ -278,7 +281,7 @@ int create_new_inode(){
 
 struct iNode* read_inode(int inode_num){
     if(!is_valid_inum(inode_num)){
-        printf("Invalid inode num being accessed or out of range");
+        printf("Invalid inode num - %d being accessed or out of range\n", inode_num);
         return false;
     }
     //get BlockId which contains the inode.
@@ -299,7 +302,7 @@ struct iNode* read_inode(int inode_num){
 
 bool write_inode(int inode_num, struct iNode* inode){
     if(!is_valid_inum(inode_num)){
-        printf("Invalid inode num being accessed or out of range");
+        printf("Invalid inode num - %d being accessed or out of range\n", inode_num);
         return false;
     }
     //get BlockId which contains the inode.
@@ -314,7 +317,7 @@ bool write_inode(int inode_num, struct iNode* inode){
     temp = temp + offset;
     //update the blockId with the inum data
     memcpy(temp, inode, sizeof(struct iNode));
-    if(write_block(block_id, buff)){
+    if(!write_block(block_id, buff)){
         return false;
     }
     DEBUG_PRINTF("Wrote inode %d to block %d offset %d", inode_num, block_id, offset);
@@ -398,7 +401,7 @@ bool free_dblocks_from_inode(struct iNode* inode){
 
 bool free_inode(int inode_num){
     if(!is_valid_inum(inode_num)){
-        printf("Invalid inode num being accessed or out of range");
+        printf("Invalid inode num - %d being accessed or out of range\n", inode_num);
         return false;
     }
     int block_id = inode_num_to_block_id(inode_num);

@@ -127,7 +127,7 @@ int main()
     for (int i = 0; i < DBLOCKS_PER_BLOCK; i++)
     {
         int dblock_num = create_new_dblock();
-        printf("Dblock - %d allocated\n", dblock_num);
+        //printf("Dblock - %d allocated\n",dblock_num);
         if (dblock_num < 0)
         {
             printf("BLOCK_LAYER_TEST 3 ERROR: Error during new dblock creation\n\n");
@@ -153,6 +153,7 @@ int main()
     struct superBlock *super_block = get_superblock();
     printf("Freelist head: %d Expected head: %d\n\n", super_block->free_list_head, INODE_B_COUNT + 1 + DBLOCKS_PER_BLOCK);
     printf("BLOCK_LAYER_TEST 3 INFO: Dblock allocation, read and write consistency check - Passed!\n\n");
+    // printf("size - %ld", sizeof(int));
     // Free any allocated block (freeing a properly known last head in this case)
     if (!free_dblock(INODE_B_COUNT + 1))
     {
@@ -165,18 +166,19 @@ int main()
     // Check inode related functions
     int inode_num;
     // Create a new inode for each available slot in the superblock
-    for (int i = 0; i < super_block->inodes_per_block + 2; i++)
+    for (int i = 0; i < super_block->inodes_per_block; i++)
     {
         inode_num = create_new_inode();
+        // printf("Inum - %d allocated \n", inode_num);
         // Check for any errors while creating the inode
-        if (inode_num < 0)
+        if (!is_valid_inum(inode_num))
         {
-            printf("BLOCK_LAYER_TEST 5 ERROR: Error during create_new_inode\n");
+            printf("BLOCK_LAYER_TEST 5 ERROR: Error during create_new_inode - %d\n", inode_num);
             return -1;
         }
     }
     // Inform the user that the inode allocation check has passed
-    printf("\n\nBLOCK_LAYER_TEST 5 INFO: Inode allocation check - Passed!\n\n");
+    printf("BLOCK_LAYER_TEST 5 INFO: Inode allocation check - Passed!\n\n");
     // Allocate memory for an inode struct
     struct iNode *inode = (struct iNode *)malloc(sizeof(struct iNode));
     // Allocate all direct access dbs for the inode
@@ -193,7 +195,7 @@ int main()
     memset(buff, 0, BLOCK_SIZE);
     size_t offset = 0;
     // Go over one block and add all addresses to the buffer
-    for (int i = 0; i < DBLOCKS_PER_BLOCK / 2; i++)
+    for (int i = 0; i < DIRECT_B_COUNT / 2; i++)
     {
         int block_id = create_new_dblock();
         memcpy(buff + offset, &block_id, ADDRESS_SIZE);

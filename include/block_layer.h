@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include "disk_layer.h"
 
-#define ADDRESS_SIZE 8 // we need 8 bytes to tag a block number (can hold so many addresses upto 64 bits)
+#define ADDRESS_SIZE 4 // TODO: we have 4 but we might need 8 bytes to tag a block number (can hold so many addresses upto 64 bits)
 #define INODE_B_COUNT (BLOCK_COUNT/10) // blocks being allocated for inodes
 #define DATA_B_COUNT (BLOCK_COUNT - INODE_B_COUNT - 1) // blocks allocated for storing data
 #define DIRECT_B_COUNT 10 // number of direct blocks per inode
@@ -114,5 +114,7 @@ Returns:
     true / false
 */
 bool free_dblock(int dblock_num);
+
+bool is_valid_inum(int inode_num);
 
 #endif
