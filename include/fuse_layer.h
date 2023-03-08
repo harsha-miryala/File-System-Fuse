@@ -1,7 +1,7 @@
 #ifndef __FUSE_LAYER_H__
 #define __FUSE_LAYER_H__
 
-#define FUSE_USE_VERSION 31 // TODO: Not sure 
+#define FUSE_USE_VERSION 31
 
 #include <fuse.h>
 #include <errno.h>

@@ -44,19 +44,9 @@ static int inode_to_stdbuff(struct iNode* inode, struct stat* stdbuff){
     stdbuff->st_blksize = BLOCK_SIZE;
     stdbuff->st_blocks = inode->num_blocks;
     // setting times
-    struct timespec time;
-    time.tv_sec = inode->access_time;
-    time.tv_nsec = time.tv_sec * 1000000000;
-    stdbuff->st_atimespec = time;
-    time.tv_sec = inode->status_change_time;
-    time.tv_nsec = time.tv_sec * 1000000000;
-    stdbuff->st_ctimespec = time;
-    time.tv_sec = inode->modification_time;
-    time.tv_nsec = time.tv_sec * 1000000000;
-    stdbuff->st_mtimespec = time;
-    time.tv_sec = inode->creation_time;
-    time.tv_nsec = time.tv_sec * 1000000000;
-    stdbuff->st_birthtimespec = time;
+    stdbuff->st_atime = inode->access_time;
+    stdbuff->st_ctime = inode->status_change_time;
+    stdbuff->st_mtime = inode->modification_time;
     return 0;
 }
 
@@ -93,7 +83,7 @@ static int charm_chmod(const char* path, mode_t mode){
 }
 
 static int charm_create(const char* path, mode_t mode, struct fuse_file_info* file_info){
-    bool status = 0;
+    bool status = false;
     if(file_info->flags & O_CREAT){
         status = custom_mknod(path, S_IFREG|mode, -1);
     }
@@ -123,7 +113,7 @@ static int charm_open(const char* path, struct fuse_file_info* file_info){
     int inode_num = custom_open(path, file_info->flags);
     if(inode_num<=-1){
         printf("FUSE LAYER : Open function unsuccessful\n");
-        return res;
+        return -1;
     }
     return 0;
 }
@@ -133,8 +123,58 @@ static int charm_read(const char* path, char* buff, size_t size, off_t offset, s
     return nbytes_read;
 }
 
-static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* file_info){
-
+static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
+                         off_t offset, struct fuse_file_info* file_info){
+    (void) offset;
+    (void) file_info;
+    int inode_num = get_inode_num_from_path(path);
+    if(inode_num==-1){
+        return -ENOENT;
+    }
+    struct iNode* inode = read_inode(inode_num);
+    if(!S_ISDIR(inode->mode)){
+        return -ENOTDIR;
+    }
+    int num_blocks = inode->num_blocks;
+    for(int fblock_num=0; fblock_num<num_blocks; fblock_num++){
+        int dblock_num = fblock_num_to_dblock_num(inode, fblock_num);
+        char* dblock = read_dblock(dblock_num);
+        int offset = 0;
+        int next_entry_loc = 0;
+        while(offset<BLOCK_SIZE){
+            // reading inode
+            int file_inode_num;
+            memcpy(&file_inode_num, dblock+offset, INODE_SZ);
+            offset += INODE_SZ;
+            // space left or length to move
+            int entry_size; // could be either size left or how much to move
+            memcpy(&entry_size, dblock+offset, ADDRESS_PTR_SZ);
+            next_entry_loc += entry_size;
+            offset += ADDRESS_PTR_SZ;
+            // file size
+            int file_name_size;
+            memcpy(&file_name_size, dblock+offset, STRING_LENGTH_SZ);
+            offset += STRING_LENGTH_SZ;
+            // file name
+            char file_name[file_name_size+1];
+            file_name[file_name_size] = '\0';
+            memcpy(file_name, dblock+offset, file_name_size);
+            offset += file_name_size;
+            // pull inode and send through filler
+            struct iNode* file_inode = read_inode(file_inode);
+            struct stat stdbuff_data;
+            memset(&stdbuff_data, 0, sizeof(struct stat));
+            struct stat *stdbuff = &stdbuff_data;
+            inode_to_stdbuff(file_inode, stdbuff);
+            stdbuff->st_ino = file_inode_num;
+            filler(buff, file_name, stdbuff, 0);
+            offset = next_entry_loc;
+            free_memory(file_inode);
+        }
+        free_memory(dblock);
+    }
+    free_memory(inode);
+    return 0;
 }
 
 static int charm_rmdir(const char* path){

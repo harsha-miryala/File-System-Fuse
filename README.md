@@ -1,5 +1,11 @@
 # File System Implementation using FUSE
 
+## Packages to download
+
+### sudo apt-get install libfuse-dev
+### sudo apt-get install fuse fuse3
+### sudo apt-get install make automake autoconf
+
 ## Layers --
 
 ### Disk layer
