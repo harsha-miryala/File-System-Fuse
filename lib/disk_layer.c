@@ -36,10 +36,8 @@ bool alloc_memory(){
         return false;
     }
     memset(m_ptr, 0, FS_SIZE);
-	//to print use char '0'
-        printf("Succesfully allocated memory for disk \n");
+    printf("Succesfully allocated memory for disk \n");
 	printf("address is %p \n", &m_ptr);
-        printf("value at m_ptr:%c\n",*m_ptr);
 #endif
 	return true;
 }

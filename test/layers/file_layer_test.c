@@ -22,7 +22,7 @@ void mkdir_test()
     }
     printf("Directories created successfully under root.\n\n");
     // check the number of blocks in the root directory
-    struct iNode *root_inode = inode_read(ROOT_INODE);
+    struct iNode *root_inode = read_inode(ROOT_INODE);
     if (root_inode->num_blocks != 1)
     {
         printf("Number of blocks check failed.\nExpected: %i, Actual: %i\n", 1, root_inode->num_blocks);
@@ -62,7 +62,7 @@ void mk_numerous_files_test()
         // Generate file path
         snprintf(path, 15, "/test/%d.txt", i);
         // Create file
-        if (custom_mknod(path, S_IFREG, 0) < 0)
+        if (!custom_mknod(path, S_IFREG, 0))
         {
             // Print error message if file creation failed
             printf("FAILED ON FILE: %s\n", path);
@@ -82,7 +82,7 @@ void mk_numerous_files_test()
     printf("Creating multiple files in a directory: PASSED\n");
 }
 
-void unlinkMultipleFilesTest()
+void unlink_multiple_files_test()
 {
     printf("Testing unlinking multiple files in directory...\n");
     char filePath[15]; // buffer to hold file path
@@ -122,7 +122,7 @@ void mk_file_test()
         char dir_name = i + 'a';
         char file_path[5] = {'/', dir_name, '/', dir_name, '\0'};
         // Try to create a new file in the directory
-        if (custom_mknod(file_path, S_IFREG, 0) < 0)
+        if (!custom_mknod(file_path, S_IFREG, 0))
         {
             printf("Failed to create file: %s\n", file_path);
             exit(-1);
@@ -539,14 +539,13 @@ int main()
 {
     // Initialize file system
     printf("Initializing file layer test...\n");
-    int result = init_file_layer();
-    if (result)
+    if (!init_file_layer())
     {
         printf("Failed: init_file_layer() returned non zero\n");
         exit(-1);
     }
     printf("File layer initialization test passed.\n");
-    // Test to unlink root dir
+    // // Test to unlink root dir
     printf("------------------------------------------------------------------------\n");
     unlink_root_test();
     printf("------------------------------------------------------------------------\n");
