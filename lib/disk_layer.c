@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include "../include/disk_layer.h"
 
@@ -18,9 +19,10 @@ static char* m_ptr;
 
 bool alloc_memory(){
 #ifdef DISK
-    printf("Location where FS is mounted - %s\n", "/dev/vdc");
-    m_ptr = open("/dev/vdc", O_RDWR);
-    printf("Reached\n");
+    // TODO : Instead of re-starting everything, find out the first address
+    printf("Location where FS is mounted - %s\n", BLOCK_DEVICE);
+    m_ptr = open(BLOCK_DEVICE, O_RDWR);
+    // printf("File Desc of directory - %d\n", dirfd(opendir(BLOCK_DEVICE)));
     if(m_ptr==-1){
         return false;
     }

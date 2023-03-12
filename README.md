@@ -6,6 +6,15 @@
 ### sudo apt-get install fuse fuse3
 ### sudo apt-get install make automake autoconf
 
+## How to mount external partition for fuse
+- Add the block device name in disk_layer.h
+- ``` sudo su ``` to login as root user
+- Open two terminals and create a directory to intercept sys calls through fuse in that area (this is to unmount if already mounted) - ``` fusermount -u mpoint ```
+- In one of the terminals launch the fuse layer instance through - ``` make init ``` and ``` ./init -d mpoint ```
+- In the other terminal, cd into the mpoint directory and anything you do in through that dir will be intercepted by fuse
+- Note: mount directory should be empty before launching fuse 
+- You can copy the test cases using cp into the mpoint e.g. ``` cp -r ../../File-System-Fuse/test/fuse . ```
+
 ## Layers --
 
 ### Disk layer

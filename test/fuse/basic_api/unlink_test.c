@@ -6,36 +6,37 @@
 
 #define TOTAL_FILES 1000
 
-int logfile_write(char *msg, char *test_description, int log_file, int nsuccess, int nfail) {
-    // Write the test results to the logfile
+// function to write to logfile
+int logfile_write(char *msg, char *test_description, int log_file, int nsuccess, int nfail){
+    // Logfile contains the results of each tests (create, open, write operations)
     int res = write(log_file, test_description, strlen(test_description));
-    if (res == -1) {
+    if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
     sprintf(msg, "Success: %d\n", nsuccess);
     res = write(log_file, msg, strlen(msg));
     memset(msg, 0, 1000);
-    if (res == -1) {
+    if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
     sprintf(msg, "Failures: %d\n", nfail);
     res = write(log_file, msg, strlen(msg));
     memset(msg, 0, 1000);
-    if (res == -1) {
+    if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
+    return res;
 }
 
 int main(int argc, char *argv[]) {
     // Open the logfile
     int log_file = open("basicAPITest.txt", O_CREAT | O_WRONLY | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);
-    int fd;
     int nsuccess = 0, nfail = 0;
     int res = -1;
     char msg[1000];

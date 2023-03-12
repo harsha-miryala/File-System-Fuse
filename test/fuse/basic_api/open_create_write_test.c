@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <assert.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #define TOTAL_FILES 1000
 
@@ -12,7 +14,7 @@ int logfile_write(char *msg, char *test_description, int log_file, int nsuccess,
     int res = write(log_file, test_description, strlen(test_description));
     if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
     sprintf(msg, "Success: %d\n", nsuccess);
@@ -20,7 +22,7 @@ int logfile_write(char *msg, char *test_description, int log_file, int nsuccess,
     memset(msg, 0, 1000);
     if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
     sprintf(msg, "Failures: %d\n", nfail);
@@ -28,14 +30,17 @@ int logfile_write(char *msg, char *test_description, int log_file, int nsuccess,
     memset(msg, 0, 1000);
     if(res == -1){
         sprintf(msg, "Logfile write failed\n");
-        write(log_file, msg, strlen(msg));
+        res = write(log_file, msg, strlen(msg));
         memset(msg, 0, 1000);
     }
+    return res;
 }
 
 int main(int argc, char *argv[]){
     // open log file
-    int log_file = open("/home/ubuntu/File-System-Fuse/mpoint/basicAPITest.txt", O_CREAT | O_RDWR ,  S_IRWXU | S_IRWXG | S_IRWXO);
+    // TODO : Can make it generic by creating mount dir var and use it
+    // int log_file = open("/home/ubuntu/File-System-Fuse/mpoint/basicAPITest.txt", O_CREAT | O_RDWR ,  S_IRWXU | S_IRWXG | S_IRWXO);
+    int log_file = open("basicAPITest.txt", O_CREAT | O_RDWR ,  S_IRWXU | S_IRWXG | S_IRWXO);
     assert(log_file != -1); // assert to check if file is opened successfully
     int res = -1, nsuccess = 0, nfail = 0;
     int fd;
@@ -45,15 +50,18 @@ int main(int argc, char *argv[]){
     char *fname_suffix = ".txt";
     char msg[1000] = {'\0'};
     char num[5] = {'\0'};
+    mkdir("basic_api_test_files", S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
     for (int i = 1; i < TOTAL_FILES; i++){
         // formatting the filenames
         sprintf(num, "%d", i);
         strcat(strcat(strcat(fname, fname_prefix), num), fname_suffix);
-        strcat(strcat(test_dir, "/home/ubuntu/File-System-Fuse/mpoint/basic_api_test_files/"), fname);
+        // TODO : Can make it generic by creating mount dir var and use it and create dir
+        // strcat(strcat(test_dir, "/home/ubuntu/File-System-Fuse/mpoint/basic_api_test_files/"), fname);
+        strcat(strcat(test_dir, "basic_api_test_files/"), fname);
 
-        // opening the directory
+        // opening the directory with create mode
         fd = open(test_dir, O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
-	printf("file trying to be created/opened %s\n", test_dir);
+	    printf("file trying to be created/opened %s\n", test_dir);
         if(fd == -1){
             sprintf(msg, "File %s creation failed\n", fname);
             res = write(log_file, msg, strlen(msg));
@@ -65,7 +73,7 @@ int main(int argc, char *argv[]){
             if(res == -1){
                 nfail++;
                 sprintf(msg, "File %s write failed\n", fname);
-                write(fd, msg, strlen(msg));
+                res = write(fd, msg, strlen(msg));
                 memset(msg, 0, 1000);
             } else {
                 nsuccess++;

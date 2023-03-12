@@ -10,7 +10,7 @@
 //total size of content: more than 20480 bytes 
 // in each iteration we shall writ 15 bytes to the content.
 
-int main(int agrc, char *argv){
+int main(int agrc, char **argv){
     //opening the log file
     int log_file = open("LargeFileLog.txt", O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
     int fd, res=-1;

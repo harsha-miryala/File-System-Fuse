@@ -8,8 +8,9 @@
 //volume device has to be defined here
 #ifdef DISK
 #define BLOCK_DEVICE "/dev/vdc"
-#define FS_SIZE 32212254720
-//30 GB
+#define FS_SIZE 1073741824 // 1GB - taking 2 sec
+// #define FS_SIZE 10737418240 // 10GB - taking
+// #define FS_SIZE 32212254720 // 30GB - taking 4:30 min
 #else
 //currently implementing in memory FS
 #define FS_SIZE 104857600

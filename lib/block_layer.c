@@ -427,6 +427,8 @@ bool free_inode(int inode_num){
 
 bool make_fs(){
     // this calls disk layer
+    // TODO: If alloc memory indicates re-mounting on an existing partiton,
+    // don't init everything again and just read super block
     if(!alloc_memory()){
         printf("Memory allocation for block failed \n");
         return false;

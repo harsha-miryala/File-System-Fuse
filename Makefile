@@ -6,10 +6,10 @@ PKGFLAGS = `pkg-config fuse --cflags --libs`
 #CFLAGS = -g -Og -I./include -Wall -std=gnu11 $(PKGFLAGS) -D_FILE_OFFSET_BITS=64
 
 # Uncomment line below for disk layer to read from disk
-#CFLAGS = -g  -Og -I./include -Wall -std=gnu11 $(PKGFLAGS) -DDISK -D_FILE_OFFSET_BITS=64
+CFLAGS = -g  -Og -I./include -Wall -std=gnu11 $(PKGFLAGS) -DDISK -D_FILE_OFFSET_BITS=64
 
 #Uncomment line below for more verbose debug info
-CFLAGS = -g -Og -I./include -Wall -std=gnu11 $(PKGFLAGS) -DDEBUG -D_FILE_OFFSET_BITS=64
+# CFLAGS = -g -Og -I./include -Wall -std=gnu11 $(PKGFLAGS) -DDEBUG -D_FILE_OFFSET_BITS=64
 
 init: lib/fuse_layer.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/lru_cache.c
 	$(CC) -o $@ $^ $(CFLAGS)

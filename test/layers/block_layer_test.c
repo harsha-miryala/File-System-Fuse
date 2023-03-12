@@ -60,7 +60,7 @@ int print_superblock()
 void print_constants()
 {
     printf("\n==== FILE SYSTEM CONSTANTS =====\n");
-    printf("FILE SYSTEM SIZE: %d MB\nBLOCK SIZE: %d\nBLOCK COUNT: %d\nADDRESS SIZE: %d\nINODE BLOCK COUNT: %d\nDATA BLOCK COUNT: %d\nDBLOCKS PER BLOCK: %d\nFREE LIST BLOCKS: %d\n",
+    printf("FILE SYSTEM SIZE: %d MB\nBLOCK SIZE: %d\nBLOCK COUNT: %d\nADDRESS SIZE: %d\nINODE BLOCK COUNT: %ld\nDATA BLOCK COUNT: %ld\nDBLOCKS PER BLOCK: %d\nFREE LIST BLOCKS: %ld\n",
            (FS_SIZE / (1024 * 1024)), BLOCK_SIZE, BLOCK_COUNT, ADDRESS_SIZE, INODE_B_COUNT,
            DATA_B_COUNT, DBLOCKS_PER_BLOCK, FREE_LIST_BLOCKS);
     printf("\n==== FILE SYSTEM CONSTANTS =====\n");
@@ -161,7 +161,7 @@ int main()
         return -1;
     }
     super_block = get_superblock();
-    printf("Freelist head: %d Expected head: %d\n\n", super_block->free_list_head, INODE_B_COUNT + 1);
+    printf("Freelist head: %d Expected head: %ld\n\n", super_block->free_list_head, INODE_B_COUNT + 1);
     printf("BLOCK_LAYER_TEST 4 INFO: Dblock deallocation check - Passed!\n\n");
     // Check inode related functions
     int inode_num;
