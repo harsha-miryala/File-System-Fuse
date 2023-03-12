@@ -804,7 +804,7 @@ ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset){
         }
     }
     free_memory(buf_read);
-    DEBUG_PRINTF("FILE_LAYER: Read Successful for the file %s\n",path);
+    DEBUG_PRINTF("FILE_LAYER: Read Successful for the file %s\n Bytes read: %zu\n",path, bytes_read);
     time_t curr_time = time(NULL);
     inode->access_time = curr_time;
 
@@ -833,7 +833,7 @@ ssize_t custom_write(const char* path, void* buff, size_t nbytes, size_t offset)
         int new_blocks_to_be_added = ((offset + nbytes) / BLOCK_SIZE) - inode->num_blocks + 1;
         // printf("Creating %d new blocks for writing %d bytes with %d offset to inode %d\n",
         //        new_blocks_to_be_added, nbytes, offset, inum);
-        DEBUG_PRINTF("Total new blocks being added to the file is %d\n". new_blocks_to_be_added);
+        DEBUG_PRINTF("Total new blocks being added to the file is %d\n", new_blocks_to_be_added);
         int new_block_id;
         for(int i=0; i<new_blocks_to_be_added; i++){
             new_block_id = create_new_dblock();

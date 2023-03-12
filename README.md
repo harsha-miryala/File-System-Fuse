@@ -41,5 +41,5 @@
 
 #### File layer
 
-##### gcc -Wall test/layers/file_layer_test.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/lru_cache.c -o obj/file_test
+##### gcc -Wall test/layers/file_layer_test.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/lru_cache.c -o obj/file_test `pkg-config fuse --cflags --libs`
 ##### ./obj/file_test

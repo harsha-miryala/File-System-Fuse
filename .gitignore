@@ -1,7 +1,9 @@
 .vscode
 .o
-.out
 obj
 obj/*
 init
+.out
+.gch
+.txt
 .obj

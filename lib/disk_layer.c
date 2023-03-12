@@ -18,10 +18,13 @@ static char* m_ptr;
 
 bool alloc_memory(){
 #ifdef DISK
-    m_ptr = open(BLOCK_DEVICE, O_RDWR);
+    printf("Location where FS is mounted - %s\n", "/dev/vdc");
+    m_ptr = open("/dev/vdc", O_RDWR);
+    printf("Reached\n");
     if(m_ptr==-1){
         return false;
     }
+    printf("address is %p \n", &m_ptr);
     char buff[BLOCK_SIZE];
     memset(&buff, 0, BLOCK_SIZE);
     for(int i=0; i<BLOCK_COUNT; i++){
@@ -39,11 +42,13 @@ bool alloc_memory(){
     printf("Succesfully allocated memory for disk \n");
 	printf("address is %p \n", &m_ptr);
 #endif
+	//printf("memory successfully allocated\n");
 	return true;
 }
 
 bool dealloc_memory(){
 #ifdef DISK
+   printf("memory deallocation starting\n");
     if(close(m_ptr)!=0){
         return false;
     }
@@ -79,6 +84,7 @@ bool read_block(int block_id, char *buffer){
     int offset = BLOCK_SIZE * block_id;
     memcpy(buffer, m_ptr+offset, BLOCK_SIZE);
 #endif
+    //printf("successfully read block %d\n",block_id);
     return true;
 }
 
@@ -103,6 +109,7 @@ bool write_block(int block_id, char *buffer){
     int offset = BLOCK_SIZE * block_id;
     memcpy(m_ptr+offset, buffer, BLOCK_SIZE);
 #endif
+    //printf("successfully wrote block %d\n", block_id);
     return true;
 }
 

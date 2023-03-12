@@ -7,7 +7,7 @@
 
 //volume device has to be defined here
 #ifdef DISK
-#define BLOCK_DEVICE "/dev/vdb"
+#define BLOCK_DEVICE "/dev/vdc"
 #define FS_SIZE 32212254720
 //30 GB
 #else

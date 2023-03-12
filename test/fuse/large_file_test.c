@@ -19,7 +19,7 @@ int main(int agrc, char *argv){
     memset(msg, 0, 1000);
 
     //open the large file
-    fd =open("large_file.txt", O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
+    fd = open("large_file.txt", O_CREAT | O_RDWR, S_IRWXU | S_IRWXG | S_IRWXO);
     if(fd==-1){
         sprintf(msg, "Failure to open/create large file \'large_file.txt\'");
         res=write(log_file, msg, strlen(msg));
