@@ -73,10 +73,10 @@ int main(int argc, char *argv[]) {
     // clear buffer
     memset(buffer, 0, 100);
 
-    // set file pointer to the end of the file
-    lseek(file_descriptor, 0, SEEK_END);
+    // set file pointer to the beginning of the file
+    lseek(file_descriptor, 0, SEEK_SET);
 
-    // read the first 100 bytes of the file from the end
+    // read the first 100 bytes of the file from the beginning
     num_bytes = read(file_descriptor, buffer, 100);
 	
    printf("Reading the file after writing end\n No of bytes read is %d\n Content is %s\n", num_bytes, buffer);
