@@ -33,6 +33,7 @@ static const struct fuse_operations fuse_ops;
 
 // TODO 
 // opendir
+// symlink
 // init - not reqd as init_file_layer launched
 
 static int inode_to_stdbuff(struct iNode* inode, struct stat* stdbuff);
@@ -66,5 +67,7 @@ static int charm_truncate(const char* path, off_t offset);
 static int charm_unlink(const char* path);
 
 static int charm_write(const char* path, const char* buff, size_t size, off_t offset, struct fuse_file_info* file_info);
+
+static int charm_rename(const char *from, const char *to);
 
 #endif

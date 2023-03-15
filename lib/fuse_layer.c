@@ -18,6 +18,7 @@ static const struct fuse_operations fuse_ops = {
     .read     = charm_read,
     .write    = charm_write,
     .utimens  = charm_utimens,
+    .rename   = charm_rename,
 };
 
 // struct stat {
@@ -229,6 +230,48 @@ static int charm_unlink(const char* path){
 static int charm_write(const char* path, const char* buff, size_t size, off_t offset, struct fuse_file_info* file_info){
     int nbytes_wrote = custom_write(path, (void*)buff, size, offset);
     return nbytes_wrote;
+}
+
+static int charm_rename(const char *from, const char *to)
+{
+    // Hacky approach - copy file to the new location and remove the old one
+    // check if from exists
+    struct fuse_file_info to_fi;
+    memset(&to_fi, 0, sizeof(to_fi));
+    if(charm_access(from, O_RDONLY)!=0){
+        printf("FUSE LAYER : from file exists\n");
+        return -errno;
+    }
+    // check if to doesn't exist
+    if(charm_access(to, O_WRONLY | O_CREAT | O_EXCL)==0){
+        printf("FUSE LAYER : to file doesn't exist\n");
+        return -errno;
+    }
+    // create to
+    to_fi.flags = O_WRONLY | O_CREAT | O_TRUNC;
+    if(charm_open(to, &to_fi)!=0){
+        printf("FUSE LAYER : created to file\n");
+        return -errno;
+    }
+    // copy data from -> to
+    size_t offset = 0;
+    char buffer[BLOCK_SIZE];
+    memset(buffer, 0, BLOCK_SIZE);
+    size_t bytes_read, bytes_written;
+    while((bytes_read=custom_read(from, buffer, BLOCK_SIZE, offset))>0){
+        bytes_written = custom_write(to, (void*)buffer, bytes_read, offset);
+        if(bytes_read!=bytes_written){
+            return -errno;
+        }
+        offset += bytes_read;
+    }
+    // delete from
+    if(custom_unlink(from)==-1){
+        printf("FUSE LAYER : removing old path\n");
+        return -errno;
+    }
+    printf("FUSE LAYER : rename successful\n");
+    return 0;
 }
 
 int main(int argc, char* argv[]){

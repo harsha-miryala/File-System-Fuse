@@ -11,8 +11,11 @@
 #define INODE_B_COUNT (BLOCK_COUNT/10) // blocks being allocated for inodes
 #define DATA_B_COUNT (BLOCK_COUNT - INODE_B_COUNT - 1) // blocks allocated for storing data
 #define DIRECT_B_COUNT 10 // number of direct blocks per inode
-#define DBLOCKS_PER_BLOCK (BLOCK_SIZE / ADDRESS_SIZE) // number of block addresses storable by a block i.e. 4K/8 = 512
+#define DBLOCKS_PER_BLOCK (BLOCK_SIZE / ADDRESS_SIZE) // number of block addresses storable by a block i.e. 4K/4 = 1028
 #define FREE_LIST_BLOCKS ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1) // number of freelist blocks needed to store the information of data blocks
+// 10 direct blocks = 40KB
+// single indirect stores BLOCK_SIZE/ADDRESS_SIZE = 4KB/4 = 1K * 4K = 4MB
+// double indirect stores 1K * 1K * 4K = 4GB
 
 struct superBlock {
     int inode_count; // total number of inodes we can have

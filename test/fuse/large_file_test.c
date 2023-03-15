@@ -33,7 +33,7 @@ int main(int agrc, char **argv){
         for(int j=0;j<100;j++){
             strcpy(msg,buff);
         }
-        res= write(fd,msg,strlen(msg));
+        res = write(fd,msg,strlen(msg));
         if(res==-1){
             memset(msg,0,1001);
             sprintf(msg, "Error writing on large File in iter %d\n",i);
