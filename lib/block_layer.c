@@ -38,6 +38,7 @@ bool init_inode_list(){
     }
     inode->single_indirect = 0;
     inode->double_indirect = 0;
+    inode->triple_indirect = 0;
     inode->link_count = 0;
     inode->file_size = 0;
     inode->num_blocks = 0;
@@ -328,8 +329,10 @@ bool free_dblocks_from_inode(struct iNode* inode){
     bool done = false;
     char dblock_list_buff[BLOCK_SIZE];
     char single_indirect_block_buff[BLOCK_SIZE];
+    char double_indirect_block_buff[BLOCK_SIZE];
     int* dblock_list_ptr;
     int* single_indirect_block_ptr;
+    int* double_indirect_block_ptr;
     // freeing direct block
     for(int i=0; i<DIRECT_B_COUNT; i++){
         if(inode->direct_blocks[i]==0){
@@ -394,6 +397,49 @@ bool free_dblocks_from_inode(struct iNode* inode){
         }
     }
     if(!free_dblock(inode->double_indirect)){
+        return false;
+    }
+    if(done || inode->triple_indirect==0){
+        return true;
+    }
+    // freeing triple indirect
+    if(!read_block(inode->triple_indirect, double_indirect_block_buff)){
+        return false;
+    }
+    double_indirect_block_ptr = (int* )double_indirect_block_buff;
+    for(int k=0; k<DBLOCKS_PER_BLOCK; k++){
+        if(double_indirect_block_ptr[k]==0){
+            done = true;
+            break;
+        }
+        if(!read_block(double_indirect_block_ptr[k], single_indirect_block_buff)){
+            return false;
+        }
+        single_indirect_block_ptr = (int* )single_indirect_block_buff;
+        for(int i=0; i<DBLOCKS_PER_BLOCK; i++){
+            if(single_indirect_block_ptr[i]==0){
+                done = true;
+                break;
+            }
+            if(!read_block(single_indirect_block_ptr[i], dblock_list_buff)){
+                return false;
+            }
+            dblock_list_ptr = (int* )dblock_list_buff;
+            for(int j=0; j<DBLOCKS_PER_BLOCK; j++){
+                if(dblock_list_ptr[j]==0){
+                    done = true;
+                    break;
+                }
+                if(!free_dblock(dblock_list_ptr[j])){
+                    return false;
+                }
+            }
+            if(!free_dblock(single_indirect_block_ptr[i])){
+                return false;
+            }
+        }
+    }
+    if(!free_dblock(inode->triple_indirect)){
         return false;
     }
     return true;

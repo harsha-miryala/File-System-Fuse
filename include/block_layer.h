@@ -28,6 +28,7 @@ struct iNode {
     int direct_blocks[DIRECT_B_COUNT]; // direct block numbers
     int single_indirect; // single indirection -> this is a block number which contains the block numbers
     int double_indirect;
+    int triple_indirect;
     int link_count; // how many links an inode has
     int file_size; // size of file
     int num_blocks; // number of blocks a file has

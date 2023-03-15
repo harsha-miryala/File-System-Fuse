@@ -68,13 +68,35 @@ int fblock_num_to_dblock_num(const struct iNode* const inode, int fblock_num){
         free_memory(single_indirect_buff);
     }
     // double indirect
-    else{
+    else if(fblock_num < DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT + DOUBLE_INDIRECT_BLOCK_COUNT){
         if(inode->double_indirect==0){
             return dblock_num;
         }
         int* double_indirect_buff = (int*) read_dblock(inode->double_indirect);
         int offset = fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT;
         dblock_num = double_indirect_buff[offset/SINGLE_INDIRECT_BLOCK_COUNT];
+        free_memory(double_indirect_buff);
+        if(dblock_num<=0){
+            return -1;
+        }
+        int* single_indirect_buff = (int*) read_dblock(dblock_num);
+        dblock_num = single_indirect_buff[offset%SINGLE_INDIRECT_BLOCK_COUNT];
+        free_memory(single_indirect_buff);
+    }
+    // triple indirect
+    else{
+        if(inode->triple_indirect==0){
+            return dblock_num;
+        }
+        int* triple_indirect_buff = (int*) read_dblock(inode->triple_indirect);
+        int offset = fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT - DOUBLE_INDIRECT_BLOCK_COUNT;
+        dblock_num = triple_indirect_buff[offset/DOUBLE_INDIRECT_BLOCK_COUNT];
+        free_memory(triple_indirect_buff);
+        if(dblock_num<=0){
+            return -1;
+        }
+        int* double_indirect_buff = (int*) read_dblock(dblock_num);
+        dblock_num = double_indirect_buff[(offset/SINGLE_INDIRECT_BLOCK_COUNT)%SINGLE_INDIRECT_BLOCK_COUNT];
         free_memory(double_indirect_buff);
         if(dblock_num<=0){
             return -1;
@@ -97,7 +119,7 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
         inode->direct_blocks[fblock_num] = dblock_num;
     }
     // single indirect
-    else if(fblock_num<DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
+    else if(fblock_num < DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT){
         if(inode->single_indirect==0){
             return false;
         }
@@ -106,7 +128,8 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
         write_dblock(inode->single_indirect, (char*)single_indirect_buff);
         free_memory(single_indirect_buff);
     }
-    else{
+    // double indirect
+    else if(fblock_num < DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT + DOUBLE_INDIRECT_BLOCK_COUNT){
         if(inode->double_indirect==0){
             return false;
         }
@@ -116,6 +139,29 @@ bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num){
         free_memory(double_indirect_buff);
         if(single_dblock_num<=0){
             return false;
+        }
+        int* single_indirect_buff = (int*) read_dblock(single_dblock_num);
+        single_indirect_buff[offset%SINGLE_INDIRECT_BLOCK_COUNT] = dblock_num;
+        write_dblock(single_dblock_num, (char*)single_indirect_buff);
+        free_memory(single_indirect_buff);
+    }
+    // triple indirect
+    else{
+        if(inode->triple_indirect==0){
+            return dblock_num;
+        }
+        int* triple_indirect_buff = (int*) read_dblock(inode->triple_indirect);
+        int offset = fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT - DOUBLE_INDIRECT_BLOCK_COUNT;
+        int double_dblock_num = triple_indirect_buff[offset/DOUBLE_INDIRECT_BLOCK_COUNT];
+        free_memory(triple_indirect_buff);
+        if(double_dblock_num<=0){
+            return -1;
+        }
+        int* double_indirect_buff = (int*) read_dblock(double_dblock_num);
+        int single_dblock_num = double_indirect_buff[(offset/SINGLE_INDIRECT_BLOCK_COUNT)%SINGLE_INDIRECT_BLOCK_COUNT];
+        free_memory(double_indirect_buff);
+        if(single_dblock_num<=0){
+            return -1;
         }
         int* single_indirect_buff = (int*) read_dblock(single_dblock_num);
         single_indirect_buff[offset%SINGLE_INDIRECT_BLOCK_COUNT] = dblock_num;
@@ -205,7 +251,7 @@ bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
         inode->direct_blocks[fblock_num] = dblock_num;
     }
     // single indirect
-    else if(fblock_num<DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
+    else if(fblock_num < DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
         if(fblock_num == DIRECT_B_COUNT){
             int single_dblock_num = create_new_dblock();
             if(single_dblock_num==-1){
@@ -220,7 +266,8 @@ bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
         }
         free_memory(single_indirect_buff);
     }
-    else{
+    // double indirect
+    else if(fblock_num < DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT + DOUBLE_INDIRECT_BLOCK_COUNT){
         if(fblock_num==DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
             int double_dblock_num = create_new_dblock();
             if(double_dblock_num==-1){
@@ -249,6 +296,53 @@ bool add_dblock_to_inode(struct iNode* inode, const int dblock_num){
         if(!write_dblock(single_dblock_num, (char*)single_indirect_buff)){
             return false;
         }
+        free_memory(double_indirect_buff);
+        free_memory(single_indirect_buff);
+    }
+    // triple indirect
+    else{
+        if(fblock_num==DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT+DOUBLE_INDIRECT_BLOCK_COUNT){
+            int triple_dblock_num = create_new_dblock();
+            if(triple_dblock_num==-1){
+                return false;
+            }
+            inode->triple_indirect = triple_dblock_num;
+        }
+        int* triple_indirect_buff = (int*) read_dblock(inode->triple_indirect);
+        int triple_fblock_num = fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT - DOUBLE_INDIRECT_BLOCK_COUNT;
+        int triple_fblock_offset = triple_fblock_num/DOUBLE_INDIRECT_BLOCK_COUNT;
+        if(triple_fblock_num % DOUBLE_INDIRECT_BLOCK_COUNT == 0){
+            int double_dblock_num = create_new_dblock();
+            if(double_dblock_num==-1){
+                return false;
+            }
+            triple_indirect_buff[triple_fblock_offset] = double_dblock_num;
+            if(!write_dblock(inode->triple_indirect, (char *)triple_indirect_buff)){
+                return false;
+            }
+        }
+        int* double_indirect_buff = (int*) read_dblock(triple_indirect_buff[triple_fblock_offset]);
+        if(triple_fblock_num % SINGLE_INDIRECT_BLOCK_COUNT == 0){
+            int single_dblock_num = create_new_dblock();
+            if(single_dblock_num==-1){
+                return false;
+            }
+            double_indirect_buff[(triple_fblock_num/SINGLE_INDIRECT_BLOCK_COUNT)%SINGLE_INDIRECT_BLOCK_COUNT] = single_dblock_num;
+            if(!write_dblock(triple_indirect_buff[triple_fblock_offset], (char*)double_indirect_buff)){
+                return false;
+            }
+        }
+        int double_fblock_offset = (triple_fblock_num/SINGLE_INDIRECT_BLOCK_COUNT)%SINGLE_INDIRECT_BLOCK_COUNT;
+        int single_dblock_num = double_indirect_buff[double_fblock_offset];
+        if(single_dblock_num<=0){
+            return false;
+        }
+        int* single_indirect_buff = (int*) read_dblock(single_dblock_num);
+        single_indirect_buff[triple_fblock_num % SINGLE_INDIRECT_BLOCK_COUNT] = dblock_num;
+        if(!write_dblock(single_dblock_num, (char*)single_indirect_buff)){
+            return false;
+        }
+        free_memory(triple_indirect_buff);
         free_memory(double_indirect_buff);
         free_memory(single_indirect_buff);
     }
@@ -292,6 +386,24 @@ bool remove_double_indirect(int dblock_num){
     return true;
 }
 
+// free the blocks inside triple indirect
+bool remove_triple_indirect(int dblock_num){
+    if(dblock_num<=0){
+        printf("Invalid dblock num for triple indirection removal");
+        return true;
+    }
+    int* triple_indirect_buff = (int*) read_dblock(dblock_num);
+    for(int i=0; i<BLOCK_SIZE/ADDRESS_SIZE; i++){
+        if(triple_indirect_buff[i]==0){
+            break;
+        }
+        remove_double_indirect(triple_indirect_buff[i]);
+    }
+    free_dblock(dblock_num);
+    free_memory(triple_indirect_buff);
+    return true;
+}
+
 bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
     // remove blocks from fblock_num to num_blocks from inode
     if(fblock_num >= inode->num_blocks){
@@ -316,9 +428,14 @@ bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
         }
         remove_double_indirect(inode->double_indirect);
         inode->double_indirect = 0;
+        if(curr_blocks <= DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT+DOUBLE_INDIRECT_BLOCK_COUNT){
+            return true;
+        }
+        remove_double_indirect(inode->triple_indirect);
+        inode->triple_indirect = 0;
     }
     // remove single indirect blocks
-    else if(fblock_num<=DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
+    else if(fblock_num <= DIRECT_B_COUNT+SINGLE_INDIRECT_BLOCK_COUNT){
         int* single_indirect_buff = (int*) read_dblock(inode->single_indirect);
         int single_indirect_offset = fblock_num - DIRECT_B_COUNT;
         int single_indirect_total = curr_blocks - DIRECT_B_COUNT;
@@ -338,7 +455,7 @@ bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
         inode->double_indirect = 0;
     }
     // remove double indirect blocks
-    else{
+    else if (fblock_num <= DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT + DOUBLE_INDIRECT_BLOCK_COUNT){
         int* double_indirect_buff = (int*) read_dblock(inode->double_indirect);
         int double_indirect_offset = (fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT) / SINGLE_INDIRECT_BLOCK_COUNT;
         int single_indirect_offset = (fblock_num - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT) % SINGLE_INDIRECT_BLOCK_COUNT;
@@ -366,6 +483,48 @@ bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num){
             double_indirect_buff[i] = 0;
         }
         free_memory(double_indirect_buff);
+    }
+    // remove triple indirect blocks
+    else{
+        int* triple_indirect_buff = (int*) read_dblock(inode->triple_indirect);
+        int triple_fblock_num = fblock_num - (DIRECT_B_COUNT + SINGLE_INDIRECT_BLOCK_COUNT + DOUBLE_INDIRECT_BLOCK_COUNT);
+        int triple_indirect_offset = triple_fblock_num / DOUBLE_INDIRECT_BLOCK_COUNT;
+        int double_indirect_offset = (triple_fblock_num / SINGLE_INDIRECT_BLOCK_COUNT) % SINGLE_INDIRECT_BLOCK_COUNT;
+        int single_indirect_offset = triple_fblock_num % SINGLE_INDIRECT_BLOCK_COUNT;
+        if(single_indirect_offset==0 && double_indirect_offset==0){
+            remove_double_indirect(triple_indirect_buff[triple_indirect_offset]);
+            triple_indirect_buff[triple_indirect_offset] = 0;
+        } else if(single_indirect_offset==0){
+            int* double_indirect_buff = (int*) read_dblock(triple_indirect_buff[triple_indirect_offset]);
+            for(int i=double_indirect_offset; i<SINGLE_INDIRECT_BLOCK_COUNT; i++){
+                remove_single_indirect(double_indirect_buff[i]);
+                double_indirect_buff[i] = 0;
+            }
+            free_memory(double_indirect_buff);
+        } else{
+            int* double_indirect_buff = (int*) read_dblock(triple_indirect_buff[triple_indirect_offset]);
+            int* single_indirect_buff = (int*) read_dblock(double_indirect_buff[double_indirect_offset]);
+            for(int i=single_indirect_offset; i<SINGLE_INDIRECT_BLOCK_COUNT; i++){
+                free_dblock(single_indirect_buff[i]);
+                single_indirect_buff[i] = 0;
+            }
+            for(int i=double_indirect_offset+1; i<SINGLE_INDIRECT_BLOCK_COUNT; i++){
+                remove_single_indirect(double_indirect_buff[i]);
+                double_indirect_buff[i] = 0;
+            }
+            free_memory(double_indirect_buff);
+            free_memory(single_indirect_buff);
+        }
+        int triple_indirect_total = curr_blocks - DIRECT_B_COUNT - SINGLE_INDIRECT_BLOCK_COUNT - DOUBLE_INDIRECT_BLOCK_COUNT;
+        int double_blocks_to_free = SINGLE_INDIRECT_BLOCK_COUNT - triple_indirect_offset;
+        if(triple_indirect_total < double_blocks_to_free){
+            double_blocks_to_free = triple_indirect_total - triple_indirect_offset;
+        }
+        for(int i=triple_indirect_offset+1; i<triple_indirect_offset+double_blocks_to_free; i++){
+            remove_double_indirect(triple_indirect_buff[i]);
+            triple_indirect_buff[i] = 0;
+        }
+        free_memory(triple_indirect_buff);
     }
     return true;
 }

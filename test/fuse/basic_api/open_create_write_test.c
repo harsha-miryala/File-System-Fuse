@@ -38,8 +38,6 @@ int logfile_write(char *msg, char *test_description, int log_file, int nsuccess,
 
 int main(int argc, char *argv[]){
     // open log file
-    // TODO : Can make it generic by creating mount dir var and use it
-    // int log_file = open("/home/ubuntu/File-System-Fuse/mpoint/basicAPITest.txt", O_CREAT | O_RDWR ,  S_IRWXU | S_IRWXG | S_IRWXO);
     int log_file = open("basicAPITest.txt", O_CREAT | O_RDWR ,  S_IRWXU | S_IRWXG | S_IRWXO);
     assert(log_file != -1); // assert to check if file is opened successfully
     int res = -1, nsuccess = 0, nfail = 0;
@@ -55,8 +53,6 @@ int main(int argc, char *argv[]){
         // formatting the filenames
         sprintf(num, "%d", i);
         strcat(strcat(strcat(fname, fname_prefix), num), fname_suffix);
-        // TODO : Can make it generic by creating mount dir var and use it and create dir
-        // strcat(strcat(test_dir, "/home/ubuntu/File-System-Fuse/mpoint/basic_api_test_files/"), fname);
         strcat(strcat(test_dir, "basic_api_test_files/"), fname);
 
         // opening the directory with create mode
@@ -68,7 +64,7 @@ int main(int argc, char *argv[]){
             memset(msg, 0, 1000);
         } else {
             // file open is successful
-	   printf("writing to file %s \n",fname);
+	        printf("writing to file %s \n",fname);
             res = write(fd, fname, strlen(fname));
             if(res == -1){
                 nfail++;
