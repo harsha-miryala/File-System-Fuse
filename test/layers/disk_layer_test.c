@@ -31,7 +31,7 @@ int main()
     }
 
     // Check whether everything is zero
-    for (int i = 0; i < BLOCK_SIZE; i++)
+    for (ssize_t i = 0; i < BLOCK_SIZE; i++)
     {
         if (block_buffer[i] != 0)
         {
@@ -73,22 +73,22 @@ int main()
     }
 
     // Write to all blocks and read from them
-    for(int i=0; i<BLOCK_COUNT; i++)
+    for(ssize_t i=0; i<BLOCK_COUNT; i++)
     {
         memcpy(block_buffer, test_str, strlen(test_str));
         if(!write_block(i, block_buffer))
         {
-            printf("DISK_LAYER_TEST 7: Write to block %d failed\n\n", i);
+            printf("DISK_LAYER_TEST 7: Write to block %ld failed\n\n", i);
             return -1;
         }
         if(!read_block(i, block_buffer))
         {
-            printf("DISK_LAYER_TEST 7: Read from block %d failed\n\n", i);
+            printf("DISK_LAYER_TEST 7: Read from block %ld failed\n\n", i);
             return -1;
         }
         if(strcmp(block_buffer, test_str) != 0)
         {
-            printf("DISK_LAYER_TEST 7: Compare data of block %d failed\n\n", i);
+            printf("DISK_LAYER_TEST 7: Compare data of block %ld failed\n\n", i);
         }
     }
     printf("DISK_LAYER_TEST 7: Write, read and data compare for all blocks passed\n");

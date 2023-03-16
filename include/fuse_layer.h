@@ -66,6 +66,7 @@ static int charm_truncate(const char* path, off_t offset);
 
 static int charm_unlink(const char* path);
 
+// why not ssize_t
 static int charm_write(const char* path, const char* buff, size_t size, off_t offset, struct fuse_file_info* file_info);
 
 static int charm_rename(const char *from, const char *to);

@@ -23,7 +23,7 @@ unsigned long djb2_hash(const char *str)
 //     return cache;
 // }
 
-void create_cache(struct lru_cache* cache, int capacity) {
+void create_cache(struct lru_cache* cache, ssize_t capacity) {
     if(cache == NULL){
         cache = (struct lru_cache*) malloc(sizeof(struct lru_cache));
     }
@@ -79,7 +79,7 @@ bool pop_cache(struct lru_cache* cache, const char* key){
     }
     // Find the node with the given key
     unsigned long hash = djb2_hash(key);
-    int hash_index = hash % cache->capacity;
+    ssize_t hash_index = hash % cache->capacity;
     struct node* curr = cache->map[hash_index];
     while (curr != NULL) {
         if (strcmp(curr->key, key) == 0) {
@@ -93,14 +93,14 @@ bool pop_cache(struct lru_cache* cache, const char* key){
     return false; // If the key is not found in the cache
 }
 
-void set_cache(struct lru_cache* cache, const char* key, int value) {
+void set_cache(struct lru_cache* cache, const char* key, ssize_t value) {
     // Check for null values
     if (cache == NULL || key == NULL) {
         return;
     }
     // Check if key already exists in cache
     unsigned long hash = djb2_hash(key);
-    int hash_index = hash % cache->capacity;
+    ssize_t hash_index = hash % cache->capacity;
     struct node* curr = cache->map[hash_index];
     while (curr != NULL) {
         if (strcmp(curr->key, key) == 0) {
@@ -145,14 +145,14 @@ void set_cache(struct lru_cache* cache, const char* key, int value) {
     cache->map[hash_index] = node;
 }
 
-int get_cache(struct lru_cache* cache, const char* key){
+ssize_t get_cache(struct lru_cache* cache, const char* key){
     // Check for null values
     if (cache == NULL || key == NULL) {
         return -1;
     }
     // Find the node with the given key
     unsigned long hash = djb2_hash(key);
-    int hash_index = hash % cache->capacity;
+    ssize_t hash_index = hash % cache->capacity;
     struct node* curr = cache->map[hash_index];
     while (curr != NULL) {
         if (strcmp(curr->key, key) == 0) {

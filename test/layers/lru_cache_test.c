@@ -7,7 +7,7 @@
 
 int main() {
     // Create a cache with capacity 3
-    int test_size = 3;
+    ssize_t test_size = 3;
     static struct lru_cache cache;
     create_cache(&cache, test_size);
     assert(cache.capacity==test_size);

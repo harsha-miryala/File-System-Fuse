@@ -5,7 +5,7 @@
 
 struct node {
     char* key;
-    int value;
+    ssize_t value;
     struct node* prev;
     struct node* next;
 };
@@ -13,18 +13,17 @@ struct node {
 struct lru_cache {
     struct node* head;
     struct node* tail;
-    int size;
-    int capacity;
+    ssize_t size;
+    ssize_t capacity;
     struct node** map;
 };
 
-// struct lru_cache* create_cache(int capacity);
-void create_cache(struct lru_cache* cache, int capacity);
+void create_cache(struct lru_cache* cache, ssize_t capacity);
 
 bool pop_cache(struct lru_cache* cache, const char* key);
 
-void set_cache(struct lru_cache* cache, const char* key, int value);
+void set_cache(struct lru_cache* cache, const char* key, ssize_t value);
 
-int get_cache(struct lru_cache* cache, const char* key);
+ssize_t get_cache(struct lru_cache* cache, const char* key);
 
 void free_cache(struct lru_cache* cache);

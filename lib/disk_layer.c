@@ -22,14 +22,14 @@ bool alloc_memory(){
     // TODO : Instead of re-starting everything, find out the first address
     printf("Location where FS is mounted - %s\n", BLOCK_DEVICE);
     m_ptr = open(BLOCK_DEVICE, O_RDWR);
-    // printf("File Desc of directory - %d\n", dirfd(opendir(BLOCK_DEVICE)));
+    // printf("File Desc of directory - %ld\n", dirfd(opendir(BLOCK_DEVICE)));
     if(m_ptr==-1){
         return false;
     }
     printf("address is %p \n", &m_ptr);
     char buff[BLOCK_SIZE];
     memset(&buff, 0, BLOCK_SIZE);
-    for(int i=0; i<BLOCK_COUNT; i++){
+    for(ssize_t i=0; i<BLOCK_COUNT; i++){
         if(!write_block(i, buff)){
             return false;
         }
@@ -65,7 +65,7 @@ bool dealloc_memory(){
     return true;
 }
 
-bool read_block(int block_id, char *buffer){
+bool read_block(ssize_t block_id, char *buffer){
     if(!buffer){
         return false;
     }
@@ -83,14 +83,14 @@ bool read_block(int block_id, char *buffer){
         return false;
     }
 #else
-    int offset = BLOCK_SIZE * block_id;
+    ssize_t offset = BLOCK_SIZE * block_id;
     memcpy(buffer, m_ptr+offset, BLOCK_SIZE);
 #endif
-    //printf("successfully read block %d\n",block_id);
+    //printf("successfully read block %ld\n",block_id);
     return true;
 }
 
-bool write_block(int block_id, char *buffer){
+bool write_block(ssize_t block_id, char *buffer){
     if(!buffer){
         return false;
     }
@@ -108,10 +108,10 @@ bool write_block(int block_id, char *buffer){
         return false;
     }
 #else
-    int offset = BLOCK_SIZE * block_id;
+    ssize_t offset = BLOCK_SIZE * block_id;
     memcpy(m_ptr+offset, buffer, BLOCK_SIZE);
 #endif
-    //printf("successfully wrote block %d\n", block_id);
+    //printf("successfully wrote block %ld\n", block_id);
     return true;
 }
 

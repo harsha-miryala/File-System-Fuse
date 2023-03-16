@@ -50,7 +50,7 @@ int print_superblock()
     }
     struct superBlock *sb = (struct superBlock *)buffer;
     printf("\n=====SUPERBLOCK STARTS=====\n");
-    printf("\nILIST SIZE: %d\nNEXT AVAILABLE INUM: %d\nINODES PER BLOCK: %d\nFREE LIST HEAD: %d\n",
+    printf("\nILIST SIZE: %ld\nNEXT AVAILABLE INUM: %ld\nINODES PER BLOCK: %ld\nFREE LIST HEAD: %ld\n",
            sb->inode_count, sb->latest_inum, sb->inodes_per_block, sb->free_list_head);
     printf("\n=====SUPERBLOCK ENDS=====\n\n");
     return 0;
@@ -60,14 +60,14 @@ int print_superblock()
 void print_constants()
 {
     printf("\n==== FILE SYSTEM CONSTANTS =====\n");
-    printf("FILE SYSTEM SIZE: %d MB\nBLOCK SIZE: %d\nBLOCK COUNT: %d\nADDRESS SIZE: %d\nINODE BLOCK COUNT: %ld\nDATA BLOCK COUNT: %ld\nDBLOCKS PER BLOCK: %d\nFREE LIST BLOCKS: %ld\n",
+    printf("FILE SYSTEM SIZE: %ld MB\nBLOCK SIZE: %ld\nBLOCK COUNT: %ld\nADDRESS SIZE: %ld\nINODE BLOCK COUNT: %ld\nDATA BLOCK COUNT: %ld\nDBLOCKS PER BLOCK: %ld\nFREE LIST BLOCKS: %ld\n",
            (FS_SIZE / (1024 * 1024)), BLOCK_SIZE, BLOCK_COUNT, ADDRESS_SIZE, INODE_B_COUNT,
            DATA_B_COUNT, DBLOCKS_PER_BLOCK, FREE_LIST_BLOCKS);
     printf("\n==== FILE SYSTEM CONSTANTS =====\n");
 }
 
 // Print a free list block
-void print_free_list_block(int freelist_block_num)
+void print_free_list_block(ssize_t freelist_block_num)
 {
     char *block_buff = (char *)malloc(BLOCK_SIZE);
     if (!read_block(freelist_block_num, block_buff))
@@ -76,12 +76,12 @@ void print_free_list_block(int freelist_block_num)
         return;
     }
     printf("\n=== DUMP OF THE FREELIST BLOCK START ====\n");
-    int *dblock_num_ptr = (int *)block_buff;
+    ssize_t *dblock_num_ptr = (ssize_t *)block_buff;
     for (size_t i = 0; i < DBLOCKS_PER_BLOCK / 8; i++)
     {
         for (size_t j = 0; j < 8; j++)
         {
-            printf("%06d ", dblock_num_ptr[i * 8 + j]);
+            printf("%ld ", dblock_num_ptr[i * 8 + j]);
         }
         printf("\n");
     }
@@ -89,16 +89,16 @@ void print_free_list_block(int freelist_block_num)
 }
 
 // Print inode details
-void print_inode(int inode_num)
+void print_inode(ssize_t inode_num)
 {
     struct iNode *inode = read_inode(inode_num);
     printf("\n=== INODE DETAILS ===\n");
-    for (int i = 0; i < DIRECT_B_COUNT; i++)
+    for (ssize_t i = 0; i < DIRECT_B_COUNT; i++)
     {
-        printf("direct_blocks[%d]: %d\n", i, inode->direct_blocks[i]);
+        printf("direct_blocks[%ld]: %ld\n", i, inode->direct_blocks[i]);
     }
-    printf("single_indirect: %d\n", inode->single_indirect);
-    printf("double_indirect: %d\n", inode->double_indirect);
+    printf("single_indirect: %ld\n", inode->single_indirect);
+    printf("double_indirect: %ld\n", inode->double_indirect);
     printf("\n=== INODE DETAILS FINISHED===\n");
 }
 
@@ -123,11 +123,11 @@ int main()
     char *buffer = (char *)malloc(BLOCK_SIZE);
     char *test_string = "A TEST MESSAGE TO TEST THE CORRECTNESS OF BLOCK LAYER";
     memcpy(buffer, test_string, strlen(test_string));
-    printf("Data blocks per block %d\n", DBLOCKS_PER_BLOCK);
-    for (int i = 0; i < DBLOCKS_PER_BLOCK; i++)
+    printf("Data blocks per block %ld\n", DBLOCKS_PER_BLOCK);
+    for (ssize_t i = 0; i < DBLOCKS_PER_BLOCK; i++)
     {
-        int dblock_num = create_new_dblock();
-        //printf("Dblock - %d allocated\n",dblock_num);
+        ssize_t dblock_num = create_new_dblock();
+        //printf("Dblock - %ld allocated\n",dblock_num);
         if (dblock_num < 0)
         {
             printf("BLOCK_LAYER_TEST 3 ERROR: Error during new dblock creation\n\n");
@@ -151,7 +151,7 @@ int main()
         }
     }
     struct superBlock *super_block = get_superblock();
-    printf("Freelist head: %d Expected head: %d\n\n", super_block->free_list_head, INODE_B_COUNT + 1 + DBLOCKS_PER_BLOCK);
+    printf("Freelist head: %ld Expected head: %ld\n\n", super_block->free_list_head, INODE_B_COUNT + 1 + DBLOCKS_PER_BLOCK);
     printf("BLOCK_LAYER_TEST 3 INFO: Dblock allocation, read and write consistency check - Passed!\n\n");
     // printf("size - %ld", sizeof(int));
     // Free any allocated block (freeing a properly known last head in this case)
@@ -161,19 +161,19 @@ int main()
         return -1;
     }
     super_block = get_superblock();
-    printf("Freelist head: %d Expected head: %ld\n\n", super_block->free_list_head, INODE_B_COUNT + 1);
+    printf("Freelist head: %ld Expected head: %ld\n\n", super_block->free_list_head, INODE_B_COUNT + 1);
     printf("BLOCK_LAYER_TEST 4 INFO: Dblock deallocation check - Passed!\n\n");
     // Check inode related functions
-    int inode_num;
+    ssize_t inode_num = 0;
     // Create a new inode for each available slot in the superblock
-    for (int i = 0; i < super_block->inodes_per_block; i++)
+    for (ssize_t i = 0; i < super_block->inodes_per_block; i++)
     {
         inode_num = create_new_inode();
-        // printf("Inum - %d allocated \n", inode_num);
+        // printf("Inum - %ld allocated \n", inode_num);
         // Check for any errors while creating the inode
         if (!is_valid_inum(inode_num))
         {
-            printf("BLOCK_LAYER_TEST 5 ERROR: Error during create_new_inode - %d\n", inode_num);
+            printf("BLOCK_LAYER_TEST 5 ERROR: Error during create_new_inode - %ld\n", inode_num);
             return -1;
         }
     }
@@ -182,22 +182,22 @@ int main()
     // Allocate memory for an inode struct
     struct iNode *inode = (struct iNode *)malloc(sizeof(struct iNode));
     // Allocate all direct access dbs for the inode
-    for (int i = 0; i < DIRECT_B_COUNT; i++)
+    for (ssize_t i = 0; i < DIRECT_B_COUNT; i++)
     {
         inode->direct_blocks[i] = create_new_dblock();
-        printf("%d is the direct access block assigned\n", inode->direct_blocks[i]);
+        printf("%ld is the direct access block assigned\n", inode->direct_blocks[i]);
     }
     // Fill the single indirect access address block for the inode
     inode->single_indirect = create_new_dblock();
-    printf("%d is the single indirect access block assigned\n", inode->single_indirect);
+    printf("%ld is the single indirect access block assigned\n", inode->single_indirect);
     // Initialize a buffer to hold block addresses
     char buff[BLOCK_SIZE];
     memset(buff, 0, BLOCK_SIZE);
     size_t offset = 0;
     // Go over one block and add all addresses to the buffer
-    for (int i = 0; i < DIRECT_B_COUNT / 2; i++)
+    for (ssize_t i = 0; i < DIRECT_B_COUNT / 2; i++)
     {
-        int block_id = create_new_dblock();
+        ssize_t block_id = create_new_dblock();
         memcpy(buff + offset, &block_id, ADDRESS_SIZE);
         offset += ADDRESS_SIZE;
     }
@@ -217,15 +217,15 @@ int main()
     struct iNode *rd_inode = read_inode(inode_num);
     if (rd_inode == NULL)
     {
-        printf("BLOCK_LAYER_TEST ERROR: Unable to read inode of inum %d\n", inode_num);
+        printf("BLOCK_LAYER_TEST ERROR: Unable to read inode of inum %ld\n", inode_num);
         return -1;
     }
     // Print the direct access block read-back for the inode
-    for (int i = 0; i < DIRECT_B_COUNT; i++){
-        printf("%d is the direct access block read-back\n", rd_inode->direct_blocks[i]);
+    for (ssize_t i = 0; i < DIRECT_B_COUNT; i++){
+        printf("%ld is the direct access block read-back\n", rd_inode->direct_blocks[i]);
     }
     // Print the single indirect access block read-back for the inode
-    printf("%d is the single indirect access block read-back\n", rd_inode->single_indirect);
+    printf("%ld is the single indirect access block read-back\n", rd_inode->single_indirect);
     // Inform the user that the inode read-write check has passed
     printf("\n\nBLOCK_LAYER_TEST 6 INFO: Inode read-write check - Passed!\n\n");
     // Free the inode and check for errors

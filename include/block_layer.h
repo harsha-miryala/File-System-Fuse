@@ -7,34 +7,35 @@
 #include <stdbool.h>
 #include "disk_layer.h"
 
-#define ADDRESS_SIZE 4 // TODO: we have 4 but we might need 8 bytes to tag a block number (can hold so many addresses upto 64 bits)
+#define ADDRESS_SIZE 8
 #define INODE_B_COUNT (BLOCK_COUNT/10) // blocks being allocated for inodes
 #define DATA_B_COUNT (BLOCK_COUNT - INODE_B_COUNT - 1) // blocks allocated for storing data
 #define DIRECT_B_COUNT 10 // number of direct blocks per inode
-#define DBLOCKS_PER_BLOCK (BLOCK_SIZE / ADDRESS_SIZE) // number of block addresses storable by a block i.e. 4K/4 = 1028
+#define DBLOCKS_PER_BLOCK (BLOCK_SIZE / ADDRESS_SIZE) // number of block addresses storable by a block i.e. 4K/4 = 0.5 KB
 #define FREE_LIST_BLOCKS ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1) // number of freelist blocks needed to store the information of data blocks
-// 10 direct blocks = 40KB
-// single indirect stores BLOCK_SIZE/ADDRESS_SIZE = 4KB/4 = 1K * 4K = 4MB
-// double indirect stores 1K * 1K * 4K = 4GB
+// 10 direct blocks = 20KB
+// single indirect stores BLOCK_SIZE/ADDRESS_SIZE = 4KB/8 = 0.5K * 4K = 2MB
+// double indirect stores 0.5K * 0.5K * 4K = 1GB
+// triple indirect stores 0.5K * 0.5K * 0.5K * 4K = 500GB
 
 struct superBlock {
-    int inode_count; // total number of inodes we can have
-    int latest_inum; // latest inode that is free
-    int inodes_per_block; // how many inodes per block
-    int free_list_head; // block containing addresses of free dblocks, when 0 that means fs is full
+    ssize_t inode_count; // total number of inodes we can have
+    ssize_t latest_inum; // latest inode that is free
+    ssize_t inodes_per_block; // how many inodes per block
+    ssize_t free_list_head; // block containing addresses of free dblocks, when 0 that means fs is full
 };
 
 struct iNode {
-    int direct_blocks[DIRECT_B_COUNT]; // direct block numbers
-    int single_indirect; // single indirection -> this is a block number which contains the block numbers
-    int double_indirect;
-    int triple_indirect;
-    int link_count; // how many links an inode has
-    int file_size; // size of file
-    int num_blocks; // number of blocks a file has
+    ssize_t direct_blocks[DIRECT_B_COUNT]; // direct block numbers
+    ssize_t single_indirect; // single indirection -> this is a block number which contains the block numbers
+    ssize_t double_indirect;
+    ssize_t triple_indirect;
+    ssize_t link_count; // how many links an inode has
+    ssize_t file_size; // size of file
+    ssize_t num_blocks; // number of blocks a file has
     bool allocated; // boolean value to track allocation
-    int user_id;
-    int group_id;
+    ssize_t user_id;
+    ssize_t group_id;
     mode_t mode; // 664 etc - rwx rwx rwx (user, group, global) - 9 bits
     time_t access_time;
     time_t creation_time;
@@ -52,7 +53,7 @@ Inputs:
 Returns:
     inode num / -1;
 */
-int create_new_inode();
+ssize_t create_new_inode();
 
 /*
 returns the inode associated with inode_num
@@ -61,7 +62,7 @@ Inputs:
 Returns:
     inode struct if success; NULL if failure
 */
-struct iNode* read_inode(int inode_num);
+struct iNode* read_inode(ssize_t inode_num);
 
 /*
 writes the inode struct into the inode_num
@@ -71,7 +72,7 @@ Inputs:
 Returns:
     true / false
 */
-bool write_inode(int inode_num, struct iNode* inode);
+bool write_inode(ssize_t inode_num, struct iNode* inode);
 
 /*
 frees the inode and the data dblocks with the inode
@@ -80,7 +81,7 @@ Inputs:
 Returns:
     true / false
 */
-bool free_inode(int inode_num);
+bool free_inode(ssize_t inode_num);
 
 /*
 assigns a new dblock and returns the dblock_num
@@ -89,7 +90,7 @@ Inputs:
 Returns:
     dblocknum on success; -1 on failure
 */
-int create_new_dblock();
+ssize_t create_new_dblock();
 
 /*
 returns the read info buf from the dblock given by dblock_num
@@ -98,7 +99,7 @@ Inputs:
 Returns:
     buf which contains the read on success and NULL on failure
 */
-char* read_dblock(int dblock_num);
+char* read_dblock(ssize_t dblock_num);
 
 /*
 writes the info in buf to the dblock given by dblock_num
@@ -108,7 +109,7 @@ Inputs:
 Returns:
     true / false
 */
-bool write_dblock(int dblock_num, char* buff);
+bool write_dblock(ssize_t dblock_num, char* buff);
 
 /*
 Frees the dblock given by dblock_num
@@ -117,8 +118,8 @@ Inputs:
 Returns:
     true / false
 */
-bool free_dblock(int dblock_num);
+bool free_dblock(ssize_t dblock_num);
 
-bool is_valid_inum(int inode_num);
+bool is_valid_inum(ssize_t inode_num);
 
 #endif

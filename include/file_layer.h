@@ -8,10 +8,10 @@
 #include "block_layer.h"
 
 #define SINGLE_INDIRECT_BLOCK_COUNT (BLOCK_SIZE / ADDRESS_SIZE) //1024
-#define DOUBLE_INDIRECT_BLOCK_COUNT (SINGLE_INDIRECT_BLOCK_COUNT * BLOCK_SIZE / ADDRESS_SIZE) //1048576
-#define TRIPLE_INDIRECT_BLOCK_COUNT (DOUBLE_INDIRECT_BLOCK_COUNT * BLOCK_SIZE / ADDRESS_SIZE) //1073742000
-#define ADDRESS_PTR_SZ 4
-#define INODE_SZ 4
+#define DOUBLE_INDIRECT_BLOCK_COUNT (SINGLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE)) //1048576
+#define TRIPLE_INDIRECT_BLOCK_COUNT (DOUBLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE)) //1073742000
+#define ADDRESS_PTR_SZ 8
+#define INODE_SZ 8
 #define MAX_NAME_LENGTH 255 // max len of a name
 #define ROOT_INODE 2
 #define STRING_LENGTH_SZ 2
@@ -21,24 +21,24 @@
 // used when he details of a specific dir entry has to be retrieved.
 struct file_pos_in_dir{
     char* dblock;
-    int dblock_num;
-    int fblock_num;
-    int start_pos;//contains the pointer to the inum in the dir entry
-    int prev_entry;// usually contains the record len of the previous entry. If the entry is the 1st entry, it stores -1
+    ssize_t dblock_num;
+    ssize_t fblock_num;
+    ssize_t start_pos;//contains the pointer to the inum in the dir entry
+    ssize_t prev_entry;// usually contains the record len of the previous entry. If the entry is the 1st entry, it stores -1
 };
 
 // fblock is essentially position of the datablock relative to that file
 
 // Returns char array index of the last slash of parent's path
-int get_parent_id(const char* const path, int path_len);
+ssize_t get_parent_id(const char* const path, ssize_t path_len);
 // copy parent path into a given buffer
-bool get_parent_path(char* const buff, const char* const path, int path_len);
+bool get_parent_path(char* const buff, const char* const path, ssize_t path_len);
 // copy child file into a given buffer
-bool get_child_name(char* const buff, const char* const path, int path_len);
+bool get_child_name(char* const buff, const char* const path, ssize_t path_len);
 // get dblock num corr to file block number
-int fblock_num_to_dblock_num(const struct iNode* const inode, int fblock_num);
+ssize_t fblock_num_to_dblock_num(const struct iNode* const inode, ssize_t fblock_num);
 
-bool write_dblock_to_inode(struct iNode* inode, int fblock_num, int dblock_num);
+bool write_dblock_to_inode(struct iNode* inode, ssize_t fblock_num, ssize_t dblock_num);
 /*
 Adds a dblock number to an inode
 Inputs:
@@ -47,13 +47,13 @@ Inputs:
 Returns:
     true/false
 */
-bool add_dblock_to_inode(struct iNode* inode, const int dblock_num);
+bool add_dblock_to_inode(struct iNode* inode, const ssize_t dblock_num);
 // free the blocks inside single indirect
-bool remove_single_indirect(int dblock_num);
+bool remove_single_indirect(ssize_t dblock_num);
 // free the blocks inside double indirect
-bool remove_double_indirect(int dblock_num);
+bool remove_double_indirect(ssize_t dblock_num);
 
-bool remove_dblocks_from_inode(struct iNode* inode, int fblock_num);
+bool remove_dblocks_from_inode(struct iNode* inode, ssize_t fblock_num);
 /*
 Returns the inode for the file at the end of the path
 Inputs:
@@ -61,9 +61,9 @@ Inputs:
 Returns:
     i-node number on success and -1 on failure
 */
-int get_inode_num_from_path(const char* const path);
+ssize_t get_inode_num_from_path(const char* const path);
 
-int create_new_file(const char* const path, struct iNode** buff, mode_t mode);
+ssize_t create_new_file(const char* const path, struct iNode** buff, mode_t mode);
 
 bool is_empty_dir(struct iNode* inode);
 /*
@@ -90,13 +90,13 @@ bool custom_mknod(const char* path, mode_t mode, dev_t dev);
 
 struct file_pos_in_dir find_file(const char *const name, const struct iNode* const parent_inode);
 
-int custom_truncate(const char* path, size_t offset);
+ssize_t custom_truncate(const char* path, size_t offset);
 
-int custom_unlink(const char* path);
+ssize_t custom_unlink(const char* path);
 
-int custom_close(int file_descriptor);
+ssize_t custom_close(ssize_t file_descriptor);
 
-int custom_open(const char* path, int oflag);
+ssize_t custom_open(const char* path, ssize_t oflag);
 
 ssize_t custom_read(const char* path, void* buff, size_t nbytes, size_t offset);
 
@@ -111,7 +111,7 @@ Inputs:
 Returns:
     true / false
 */
-bool add_new_entry(struct iNode* inode, int inode_num, char* inode_name);
+bool add_new_entry(struct iNode* inode, ssize_t inode_num, char* inode_name);
 
 bool init_file_layer();
 

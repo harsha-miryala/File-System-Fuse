@@ -51,7 +51,7 @@ static int inode_to_stdbuff(struct iNode* inode, struct stat* stdbuff){
 }
 
 static int charm_access(const char* path, int mode){
-    int inode_num = get_inode_num_from_path(path);
+    ssize_t inode_num = get_inode_num_from_path(path);
     if(inode_num == -1){
         return -ENOENT;
     }
@@ -65,7 +65,7 @@ static int charm_chown(const char* path, uid_t uid, gid_t gid){
 }
 
 static int charm_chmod(const char* path, mode_t mode){
-    int inode_num = get_inode_num_from_path(path);
+    ssize_t inode_num = get_inode_num_from_path(path);
     if(inode_num == -1){
         return -ENOENT;
     }
@@ -99,7 +99,7 @@ static int charm_create(const char* path, mode_t mode, struct fuse_file_info* fi
 
 static int charm_getattr(const char* path, struct stat* stdbuff){
     memset(stdbuff, 0, sizeof(struct stat));
-    int inode_num = get_inode_num_from_path(path);
+    ssize_t inode_num = get_inode_num_from_path(path);
     if(inode_num==-1){
         return -ENOENT;
     }
@@ -110,7 +110,7 @@ static int charm_getattr(const char* path, struct stat* stdbuff){
 }
 
 static int charm_open(const char* path, struct fuse_file_info* file_info){
-    int inode_num = custom_open(path, file_info->flags);
+    ssize_t inode_num = custom_open(path, file_info->flags);
     if(inode_num<=-1){
         printf("FUSE LAYER : Open function unsuccessful\n");
         return -1;
@@ -119,7 +119,7 @@ static int charm_open(const char* path, struct fuse_file_info* file_info){
 }
 
 static int charm_read(const char* path, char* buff, size_t size, off_t offset, struct fuse_file_info* file_info){
-    int nbytes_read = custom_read(path, buff, size, offset);
+    ssize_t nbytes_read = custom_read(path, buff, size, offset);
     return nbytes_read;
 }
 
@@ -127,7 +127,7 @@ static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
                          off_t offset, struct fuse_file_info* file_info){
     (void) offset;
     (void) file_info;
-    int inode_num = get_inode_num_from_path(path);
+    ssize_t inode_num = get_inode_num_from_path(path);
     if(inode_num==-1){
         return -ENOENT;
     }
@@ -135,19 +135,19 @@ static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
     if(!S_ISDIR(inode->mode)){
         return -ENOTDIR;
     }
-    int num_blocks = inode->num_blocks;
-    for(int fblock_num=0; fblock_num<num_blocks; fblock_num++){
-        int dblock_num = fblock_num_to_dblock_num(inode, fblock_num);
+    ssize_t num_blocks = inode->num_blocks;
+    for(ssize_t fblock_num=0; fblock_num<num_blocks; fblock_num++){
+        ssize_t dblock_num = fblock_num_to_dblock_num(inode, fblock_num);
         char* dblock = read_dblock(dblock_num);
-        int offset = 0;
-        int next_entry_loc = 0;
+        ssize_t offset = 0;
+        ssize_t next_entry_loc = 0;
         while(offset<BLOCK_SIZE){
             // reading inode
-            unsigned int file_inode_num;
+            ssize_t file_inode_num;
             memcpy(&file_inode_num, dblock+offset, INODE_SZ);
             offset += INODE_SZ;
             // space left or length to move
-            unsigned int entry_size; // could be either size left or how much to move
+            ssize_t entry_size; // could be either size left or how much to move
             memcpy(&entry_size, dblock+offset, ADDRESS_PTR_SZ);
             next_entry_loc += entry_size;
             offset += ADDRESS_PTR_SZ;
@@ -178,7 +178,7 @@ static int charm_readdir(const char* path, void* buff, fuse_fill_dir_t filler,
 }
 
 static int charm_rmdir(const char* path){
-    int status = custom_unlink(path);
+    ssize_t status = custom_unlink(path);
     if(status==-1){
         printf("FUSE LAYER : rm dir unsuccessful\n");
         return -1;
@@ -210,7 +210,7 @@ static int charm_utimens(const char* path, const struct timespec time_spec[2]){
 }
 
 static int charm_truncate(const char* path, off_t offset){
-    int status = custom_truncate(path, offset);
+    ssize_t status = custom_truncate(path, offset);
     if(status==-1){
         printf("FUSE LAYER : truncate unsuccessful\n");
         return -1;
@@ -219,7 +219,7 @@ static int charm_truncate(const char* path, off_t offset){
 }
 
 static int charm_unlink(const char* path){
-    int status = custom_unlink(path);
+    ssize_t status = custom_unlink(path);
     if(status==-1){
         printf("FUSE LAYER : unlink unsuccessful\n");
         return -1;
@@ -228,7 +228,7 @@ static int charm_unlink(const char* path){
 }
 
 static int charm_write(const char* path, const char* buff, size_t size, off_t offset, struct fuse_file_info* file_info){
-    int nbytes_wrote = custom_write(path, (void*)buff, size, offset);
+    ssize_t nbytes_wrote = custom_write(path, (void*)buff, size, offset);
     return nbytes_wrote;
 }
 
