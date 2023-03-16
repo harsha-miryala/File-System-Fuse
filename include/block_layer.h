@@ -7,12 +7,12 @@
 #include <stdbool.h>
 #include "disk_layer.h"
 
-#define ADDRESS_SIZE 8
-#define INODE_B_COUNT (BLOCK_COUNT/10) // blocks being allocated for inodes
-#define DATA_B_COUNT (BLOCK_COUNT - INODE_B_COUNT - 1) // blocks allocated for storing data
-#define DIRECT_B_COUNT 10 // number of direct blocks per inode
-#define DBLOCKS_PER_BLOCK (BLOCK_SIZE / ADDRESS_SIZE) // number of block addresses storable by a block i.e. 4K/4 = 0.5 KB
-#define FREE_LIST_BLOCKS ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1) // number of freelist blocks needed to store the information of data blocks
+#define ADDRESS_SIZE ((ssize_t) 8)
+#define INODE_B_COUNT ((ssize_t) (BLOCK_COUNT/10)) // blocks being allocated for inodes
+#define DATA_B_COUNT ((ssize_t) (BLOCK_COUNT - INODE_B_COUNT - 1)) // blocks allocated for storing data
+#define DIRECT_B_COUNT ((ssize_t) 10) // number of direct blocks per inode
+#define DBLOCKS_PER_BLOCK ((ssize_t) (BLOCK_SIZE / ADDRESS_SIZE)) // number of block addresses storable by a block i.e. 4K/4 = 0.5 KB
+#define FREE_LIST_BLOCKS ((ssize_t) ((DATA_B_COUNT/DBLOCKS_PER_BLOCK) + 1)) // number of freelist blocks needed to store the information of data blocks
 // 10 direct blocks = 20KB
 // single indirect stores BLOCK_SIZE/ADDRESS_SIZE = 4KB/8 = 0.5K * 4K = 2MB
 // double indirect stores 0.5K * 0.5K * 4K = 1GB
@@ -123,3 +123,4 @@ bool free_dblock(ssize_t dblock_num);
 bool is_valid_inum(ssize_t inode_num);
 
 #endif
+

@@ -7,19 +7,19 @@
 
 //volume device has to be defined here
 #ifdef DISK
-#define BLOCK_DEVICE "/dev/vdc"
-// #define FS_SIZE 1073741824 // 1GB - taking 2 sec
-// #define FS_SIZE 10737418240 // 10GB - taking 1 min
-#define FS_SIZE 32212254720 // 30GB - taking 4:30 min
+#define BLOCK_DEVICE "/dev/vdb"
+#define FS_SIZE ((ssize_t) 1073741824) // 1GB - taking 2 sec
+// #define FS_SIZE ((ssize_t) 10737418240) // 10GB - taking 1 min
+// #define FS_SIZE ((ssize_t) 32212254720) // 30GB - taking 4:30 min
 #else
 //currently implementing in memory FS
-#define FS_SIZE 104857600
+#define FS_SIZE ((ssize_t) 104857600)
 //100 MB
 #endif
 
-#define BLOCK_SIZE 4096
+#define BLOCK_SIZE ((ssize_t) 4096)
 //4 KB
-#define BLOCK_COUNT (FS_SIZE/BLOCK_SIZE)
+#define BLOCK_COUNT ((ssize_t) (FS_SIZE/BLOCK_SIZE))
 
 // this allocated memory, true/false for success
 bool alloc_memory();
@@ -33,3 +33,4 @@ bool write_block(ssize_t block_id, char *buffer);
 void free_memory(void *ptr);
 
 #endif
+

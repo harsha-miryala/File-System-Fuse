@@ -7,15 +7,15 @@
 #include "disk_layer.h"
 #include "block_layer.h"
 
-#define SINGLE_INDIRECT_BLOCK_COUNT (BLOCK_SIZE / ADDRESS_SIZE) //1024
-#define DOUBLE_INDIRECT_BLOCK_COUNT (SINGLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE)) //1048576
-#define TRIPLE_INDIRECT_BLOCK_COUNT (DOUBLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE)) //1073742000
-#define ADDRESS_PTR_SZ 8
-#define INODE_SZ 8
-#define MAX_NAME_LENGTH 255 // max len of a name
-#define ROOT_INODE 2
-#define STRING_LENGTH_SZ 2
-#define CACHE_SIZE 50000
+#define SINGLE_INDIRECT_BLOCK_COUNT ((ssize_t) (BLOCK_SIZE / ADDRESS_SIZE)) //1024
+#define DOUBLE_INDIRECT_BLOCK_COUNT ((ssize_t) (SINGLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE))) //1048576
+#define TRIPLE_INDIRECT_BLOCK_COUNT ((ssize_t) (DOUBLE_INDIRECT_BLOCK_COUNT * (BLOCK_SIZE / ADDRESS_SIZE))) //1073742000
+#define ADDRESS_PTR_SZ ((ssize_t) 8)
+#define INODE_SZ ((ssize_t) 8)
+#define MAX_NAME_LENGTH ((ssize_t) 255) // max len of a name
+#define ROOT_INODE ((ssize_t) 2)
+#define STRING_LENGTH_SZ ((ssize_t) 2)
+#define CACHE_SIZE ((ssize_t) 50000)
 #define DEFAULT_PERMS (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)
 
 // used when he details of a specific dir entry has to be retrieved.
@@ -116,3 +116,4 @@ bool add_new_entry(struct iNode* inode, ssize_t inode_num, char* inode_name);
 bool init_file_layer();
 
 #endif
+
