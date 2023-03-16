@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define ITER_COUNT 250000
+#define ITER_COUNT 1500000
 
 int main(int agrc, char **argv){
     //opening the log file
@@ -33,7 +33,7 @@ int main(int agrc, char **argv){
     }
     // writing to log file is finished. Update the log file.
     memset(msg, 0, 4096);
-    sprintf(msg,"SUCCESS! FILE SIZE: %d KB\n", ITER_COUNT);
+    sprintf(msg,"SUCCESS! FILE SIZE: %d GB\n", (ITER_COUNT/1000000)*4);
     res=write(log_file, msg, strlen(msg));
 
     close(fd);
