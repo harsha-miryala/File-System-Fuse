@@ -27,7 +27,7 @@ obj/unlink_test: basic_api/unlink_test.c
 obj/large_file_test: large_file_test.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
-obj/extra_large_file_test: large_file_test.c
+obj/extra_large_file_test: extra_large_file_test.c
 	$(CC) -o $@ $^ $(CFLAGS)
 
 obj/nested_dir_test: nested_dir_test.c
