@@ -53,9 +53,10 @@
 ##### gcc -Wall test/layers/file_layer_test.c lib/file_layer.c lib/block_layer.c lib/disk_layer.c lib/lru_cache.c -o obj/file_test `pkg-config fuse --cflags --libs`
 ##### ./obj/file_test
 
-#### Fuse Layer tests that invoke FS calls. 
-###### cd PATH/TO/test/fuse/basic_api
-###### - First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
+#### Fuse Layer tests that invoke FS calls
+
+##### cd PATH/TO/test/fuse/basic_api
+##### - First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
 ##### gcc -o open_create_write_test open_create_write_test.c
 ##### ./open_create_write_test
 
