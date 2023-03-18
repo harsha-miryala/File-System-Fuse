@@ -17,13 +17,13 @@
 
 ## Layers --
 
-### Disk layer
+- Disk layer
 
-### Block layer
+- Block layer
 
-### File layer
+- File layer
 
-### Fuse layer
+- Fuse layer
 
 ## Utils --
 
@@ -56,15 +56,15 @@
 #### Fuse Layer tests that invoke FS calls
 
 ##### cd PATH/TO/test/fuse/basic_api
-##### - First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
+- First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
 ##### gcc -o open_create_write_test open_create_write_test.c
 ##### ./open_create_write_test
 
-##### - Then run tests for lseek operation
+- Then run tests for lseek operation
 ##### gcc -o lseek_read_write_test lseek_read_write_test.c
 ##### ./lseek_read_write_test
 
-##### - To run tests for unlink
+- To run tests for unlink
 ##### gcc -o unlink_test unlink_test.c
 ##### ./unlink_test
 
