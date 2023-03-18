@@ -54,26 +54,26 @@
 ##### ./obj/file_test
 
 #### Fuse Layer tests that invoke FS calls. 
-cd PATH/TO/test/fuse/basic_api
--> First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
-gcc -o open_create_write_test open_create_write_test.c
-./open_create_write_test
+######cd PATH/TO/test/fuse/basic_api
+###### -> First tests the open_create_write_test.c This will create multiple files within the directory basic_api_test_files.
+##### gcc -o open_create_write_test open_create_write_test.c
+##### ./open_create_write_test
 
--> Then run tests for lseek operation
-gcc -o lseek_read_write_test lseek_read_write_test.c
-./lseek_read_write_test
+##### -> Then run tests for lseek operation
+##### gcc -o lseek_read_write_test lseek_read_write_test.c
+##### ./lseek_read_write_test
 
--> To run tests for unlink
-gcc -o unlink_test unlink_test.c
-./unlink_test
+##### -> To run tests for unlink
+##### gcc -o unlink_test unlink_test.c
+##### ./unlink_test
 
 #### Testing large and extra large files.
-cd PATH/TO/test/fuse
-gcc -o large_file_test  large_file_test.c
-./large_file_test
+#####cd PATH/TO/test/fuse
+#####gcc -o large_file_test  large_file_test.c
+#####./large_file_test
 
-gcc -o extra_large_file_test extra_large_file_test.c
-./extra_large_file_test
+#####gcc -o extra_large_file_test extra_large_file_test.c
+#####./extra_large_file_test
 
 
 
